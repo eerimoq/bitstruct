@@ -16,6 +16,8 @@ Functions
 
 .. autofunction:: bitstruct.pack
 .. autofunction:: bitstruct.unpack
+.. autofunction:: bitstruct.pack_into
+.. autofunction:: bitstruct.unpack_from
 .. autofunction:: bitstruct.calcsize
 .. autofunction:: bitstruct.byteswap
 .. autofunction:: bitstruct.compile
