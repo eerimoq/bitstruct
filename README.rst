@@ -49,6 +49,20 @@ and `unpack`_ data:
     >>> cf.unpack(b'\xa3\xff\xfc')
     (1, 2, 3, -4)
 
+Use the `pack into`_ and `unpack from`_ functions to pack/unpack
+values at a bit offset into the data, in this example the bit offset
+is 5:
+
+.. code-block:: python
+
+    >>> from bitstruct import *
+    >>> data = bytearray(b'\x00\x00\x00\x00')
+    >>> pack_into('u1u3u4s16', data, 5, 1, 2, 3, -4)
+    >>> data
+    bytearray(b'\x05\x1f\xff\xe0')
+    >>> unpack_from('u1u3u4s16', data, 5)
+    (1, 2, 3, -4)
+
 The unpacked values can be named by assigning them to variables or by
 wrapping the result in a named tuple:
 
@@ -152,6 +166,10 @@ Contributing
 .. _pack: http://bitstruct.readthedocs.io/en/latest/#bitstruct.CompiledFormat.pack
 
 .. _unpack: http://bitstruct.readthedocs.io/en/latest/#bitstruct.CompiledFormat.unpack
+
+.. _pack into: http://bitstruct.readthedocs.io/en/latest/#bitstruct.pack_into
+
+.. _unpack from: http://bitstruct.readthedocs.io/en/latest/#bitstruct.unpack_from
 
 .. _byteswap: http://bitstruct.readthedocs.io/en/latest/#bitstruct.byteswap
 
