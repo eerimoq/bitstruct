@@ -170,11 +170,11 @@ class CompiledFormat(object):
         else:
             raise Error("bad type '{}' in format".format(type_))
 
-        # reverse the bit order in little endian values
+        # Reverse the bit order in little endian values.
         if endianness == "<":
             value_bits = value_bits[::-1]
 
-        # reverse bytes order for least significant byte first
+        # Reverse bytes order for least significant byte first.
         if self._byte_order == ">":
             bits += value_bits
         else:
@@ -219,7 +219,7 @@ class CompiledFormat(object):
                 bits = self._pack_value(type_, size, args[i], endianness, bits)
                 i += 1
 
-        # padding of last byte
+        # Padding of last byte.
         tail = len(bits) % 8
 
         if tail != 0:
@@ -314,7 +314,8 @@ class CompiledFormat(object):
             if type_ in 'pP':
                 pass
             else:
-                # reverse bytes order for least significant byte first
+                # Reverse bytes order for least significant byte
+                # first.
                 if self._byte_order == ">":
                     value_bits = bits[offset:offset + size]
                 else:
@@ -329,7 +330,7 @@ class CompiledFormat(object):
 
                     value_bits += value_bits_tmp
 
-                # reverse the bit order in little endian values
+                # Reverse the bit order in little endian values.
                 if endianness == "<":
                     value_bits = value_bits[::-1]
 
