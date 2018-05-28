@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "3.8.0"
+__version__ = "3.9.0"
 
 
 class Error(Exception):
@@ -362,7 +362,7 @@ class CompiledFormat(object):
 
         """
 
-        return sum([size for _, size, _ in self._infos])
+        return self._number_of_bits_to_unpack
 
 
 def pack(fmt, *args):
