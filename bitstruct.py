@@ -138,9 +138,6 @@ class CompiledFormat(object):
     Instances of this class are created by the factory function
     :func:`~bitstruct.compile()`.
 
-    :param fmt: Bitstruct format string. See :func:`~bitstruct.pack()`
-                for details.
-
     """
 
     def __init__(self, fmt):
@@ -195,9 +192,6 @@ class CompiledFormat(object):
         of bits are not a multiple of 8, padding will be added at the
         end of the last byte.
 
-        :param args: Variable argument list of values to pack.
-        :returns: A byte string of the packed values.
-
         """
 
         bits = ''
@@ -232,9 +226,6 @@ class CompiledFormat(object):
         according to the compiled format string. The result is a tuple
         even if it contains exactly one item.
 
-        :param data: Byte string of values to unpack.
-        :returns: A tuple of the unpacked values.
-
         """
 
         return self.unpack_from(data)
@@ -243,12 +234,6 @@ class CompiledFormat(object):
         """Pack given values v1, v2, ... into `buf`, starting at given bit
         offset `offset`. Give `fill_padding` as ``False`` to leave
         padding bits in `buf` unmodified.
-
-        :param buf: Buffer to pack data into.
-        :param offset: Bit offset to start at.
-        :param args: Variable argument list of values to pack.
-        :param fill_padding: A boolean to control if padding should
-                             overwrite bits in `buf`.
 
         """
 
@@ -291,10 +276,6 @@ class CompiledFormat(object):
         according to given format string `fmt`, starting at given bit
         offset `offset`. The result is a tuple even if it contains
         exactly one item.
-
-        :param data: Byte string of values to unpack.
-        :param offset: Bit offset to start unpack from.
-        :returns: A tuple of the unpacked values.
 
         """
 
@@ -356,9 +337,7 @@ class CompiledFormat(object):
         return tuple(res)
 
     def calcsize(self):
-        """Calculate the number of bits in the compiled format string.
-
-        :returns: Number of bits in the format string.
+        """Return the number of bits in the compiled format string.
 
         """
 
@@ -370,10 +349,6 @@ def pack(fmt, *args):
     according to given format string `fmt`. If the total number of
     bits are not a multiple of 8, padding will be added at the end of
     the last byte.
-
-    :param fmt: Bitstruct format string. See format description below.
-    :param args: Variable argument list of values to pack.
-    :returns: A byte string of the packed values.
 
     `fmt` is a string of bitorder-type-length groups, and optionally a
     byteorder identifier after the groups. Bitorder and byteorder may
@@ -423,11 +398,6 @@ def unpack(fmt, data):
     according to given format string `fmt`. The result is a tuple even
     if it contains exactly one item.
 
-    :param fmt: Bitstruct format string. See :func:`~bitstruct.pack()`
-                for details.
-    :param data: Byte string of values to unpack.
-    :returns: A tuple of the unpacked values.
-
     """
 
     return CompiledFormat(fmt).unpack(data)
@@ -438,13 +408,6 @@ def pack_into(fmt, buf, offset, *args, **kwargs):
     offset `offset`. Pack according to given format string `fmt`. Give
     `fill_padding` as ``False`` to leave padding bits in `buf`
     unmodified.
-
-    :param fmt: Bitstruct format string. See format description below.
-    :param buf: Buffer to pack data into.
-    :param offset: Bit offset to start at.
-    :param args: Variable argument list of values to pack.
-    :param fill_padding: A boolean to control if padding should
-                         overwrite bits in `buf`.
 
     """
 
@@ -460,23 +423,13 @@ def unpack_from(fmt, data, offset=0):
     offset `offset`. The result is a tuple even if it contains exactly
     one item.
 
-    :param fmt: Bitstruct format string. See :func:`~bitstruct.pack()`
-                for details.
-    :param data: Byte string of values to unpack.
-    :param offset: Bit offset to start unpack from.
-    :returns: A tuple of the unpacked values.
-
     """
 
     return CompiledFormat(fmt).unpack_from(data, offset)
 
 
 def calcsize(fmt):
-    """Calculate the number of bits in given format string `fmt`.
-
-    :param fmt: Bitstruct format string. See :func:`~bitstruct.pack()`
-                for details.
-    :returns: Number of bits in format string.
+    """Return the number of bits in given format string `fmt`.
 
     """
 
@@ -484,16 +437,11 @@ def calcsize(fmt):
 
 
 def byteswap(fmt, data, offset=0):
-    """Swap bytes in `data` according to `fmt`, starting at byte
-    `offset`. `fmt` must be an iterable, iterating over number of
-    bytes to swap. For example, the format string ``'24'`` applied to
-    the byte string ``b'\\x00\\x11\\x22\\x33\\x44\\x55'`` will produce
-    the result ``b'\\x11\\x00\\x55\\x44\\x33\\x22'``.
-
-    :param fmt: Swap format string.
-    :param data: Byte string of data to swap.
-    :param offset: Start offset into `data`.
-    :returns: Byte string of swapped bytes.
+    """Swap bytes in `data` according to `fmt`, starting at byte `offset`
+    and return the result. `fmt` must be an iterable, iterating over
+    number of bytes to swap. For example, the format string ``'24'``
+    applied to the byte string ``b'\\x00\\x11\\x22\\x33\\x44\\x55'``
+    will produce the result ``b'\\x11\\x00\\x55\\x44\\x33\\x22'``.
 
     """
 
@@ -512,9 +460,6 @@ def compile(fmt):
     """Compile given format string `fmt` and return a
     :class:`~bitstruct.CompiledFormat` object that can be used to pack
     and/or unpack data multiple times.
-
-    :param fmt: Bitstruct format string. See :func:`~bitstruct.pack()`
-                for details.
 
     """
 
