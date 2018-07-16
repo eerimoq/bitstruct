@@ -78,7 +78,7 @@ wrapping the result in a named tuple:
     >>> myname.c
     3
 
-An example of `packing`_ and `unpacking`_ an unsinged integer, a
+An example of `packing`_ and `unpacking`_ an unsigned integer, a
 signed integer, a float, a boolean, a byte string and a string:
 
 .. code-block:: python
