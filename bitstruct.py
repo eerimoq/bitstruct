@@ -13,6 +13,163 @@ class Error(Exception):
     pass
 
 
+class _Info(object):
+
+    def __init__(self, size):
+        self.size = size
+        self.endianness = None
+
+
+class _SignedInteger(_Info):
+
+    def __init__(self, size):
+        super(_SignedInteger, self).__init__(size)
+        self.minimum = -2 ** (size - 1)
+        self.maximum = -self.minimum - 1
+
+    def pack(self, arg):
+        value = int(arg)
+
+        if value < self.minimum or value > self.maximum:
+            raise Error(
+                '"s{}" requires {} <= integer <= {} (got {})'.format(
+                    self.size,
+                    self.minimum,
+                    self.maximum,
+                    arg))
+
+        if value < 0:
+            value += (1 << self.size)
+
+        value += (1 << self.size)
+
+        return bin(value)[3:]
+
+    def unpack(self, bits):
+        value = int(bits, 2)
+
+        if bits[0] == '1':
+            value -= (1 << len(bits))
+
+        return value
+
+
+class _UnsignedInteger(_Info):
+
+    def __init__(self, size):
+        super(_UnsignedInteger, self).__init__(size)
+        self.maximum = 2 ** size - 1
+
+    def pack(self, arg):
+        value = int(arg)
+
+        if value < 0 or value > self.maximum:
+            raise Error(
+                '"u{}" requires 0 <= integer <= {} (got {})'.format(
+                    self.size,
+                    self.maximum,
+                    arg))
+
+        return bin(value + (1 << self.size))[3:]
+
+    def unpack(self, bits):
+        return int(bits, 2)
+
+
+class _Boolean(_UnsignedInteger):
+
+    def pack(self, arg):
+        return super(_Boolean, self).pack(int(bool(arg)))
+
+    def unpack(self, bits):
+        return bool(super(_Boolean, self).unpack(bits))
+
+
+class _Float(_Info):
+
+    def pack(self, arg):
+        value = float(arg)
+
+        if self.size == 16:
+            value = struct.pack('>e', value)
+        elif self.size == 32:
+            value = struct.pack('>f', value)
+        elif self.size == 64:
+            value = struct.pack('>d', value)
+        else:
+            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
+                self.size))
+
+        return bin(int(b'01' + binascii.hexlify(value), 16))[3:]
+
+    def unpack(self, bits):
+        packed = _unpack_bytearray(self.size, bits)
+
+        if self.size == 16:
+            value = struct.unpack('>e', packed)[0]
+        elif self.size == 32:
+            value = struct.unpack('>f', packed)[0]
+        elif self.size == 64:
+            value = struct.unpack('>d', packed)[0]
+        else:
+            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
+                self.size))
+
+        return value
+
+
+class _Raw(_Info):
+
+    def pack(self, arg):
+        value = bytearray(arg)
+
+        if 8 * len(value) < self.size:
+            raise Error(
+                '"r{}" requires at least {} bits (got {})'.format(
+                    self.size,
+                    self.size,
+                    8 * len(value)))
+
+
+        return bin(int(b'01' + binascii.hexlify(value), 16))[3:self.size + 3]
+
+    def unpack(self, bits):
+        rest = self.size % 8
+
+        if rest > 0:
+            bits += (8 - rest) * '0'
+
+        return binascii.unhexlify(hex(int('10000000' + bits, 2))[4:].rstrip('L'))
+
+
+class _Padding(_Info):
+
+    pass
+
+
+class _ZeroPadding(_Padding):
+
+    def pack(self):
+        return self.size * '0'
+
+
+class _OnePadding(_Padding):
+
+    def pack(self):
+        return self.size * '1'
+
+
+class _Text(_Info):
+
+    def pack(self, arg):
+        value = arg.encode('utf-8')
+
+        return _pack_bytearray(self.size, bytearray(value))
+
+    def unpack(self, bits):
+        return _unpack_bytearray(self.size, bits).decode('utf-8')
+
+
 def _parse_format(fmt):
     if fmt and fmt[-1] in '><':
         byte_order = fmt[-1]
@@ -30,92 +187,41 @@ def _parse_format(fmt):
     infos = []
     endianness = ">"
 
-    for info in parsed_infos:
-        if info[0] != "":
-            endianness = info[0]
+    for parsed_info in parsed_infos:
+        if parsed_info[0] != "":
+            endianness = parsed_info[0]
 
-        if info[1] not in 'supPfbtr':
-            raise Error("bad char '{}' in format".format(info[1]))
+        type_ = parsed_info[1]
+        size = int(parsed_info[2])
 
-        infos.append((info[1], int(info[2]), endianness))
+        if type_ == 's':
+            info = _SignedInteger(size)
+        elif type_ == 'u':
+            info = _UnsignedInteger(size)
+        elif type_ == 'f':
+            info = _Float(size)
+        elif type_ == 'b':
+            info = _Boolean(size)
+        elif type_ == 't':
+            info = _Text(size)
+        elif type_ == 'r':
+            info = _Raw(size)
+        elif type_ == 'p':
+            info = _ZeroPadding(size)
+        elif type_ == 'P':
+            info = _OnePadding(size)
+        else:
+            raise Error("bad char '{}' in format".format(type_))
+
+        info.endianness = endianness
+
+        infos.append(info)
 
     return infos, byte_order or '>'
 
 
-def _pack_integer(size, arg):
-    value = int(arg)
-
-    if value < 0:
-        value += (1 << size)
-
-    value += (1 << size)
-
-    return bin(value)[3:]
-
-
-def _pack_boolean(size, arg):
-    value = bool(arg)
-
-    return _pack_integer(size, int(value))
-
-
-def _pack_float(size, arg):
-    value = float(arg)
-
-    if size == 16:
-        value = struct.pack('>e', value)
-    elif size == 32:
-        value = struct.pack('>f', value)
-    elif size == 64:
-        value = struct.pack('>d', value)
-    else:
-        raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
-            size))
-
-    return bin(int(b'01' + binascii.hexlify(value), 16))[3:]
-
-
 def _pack_bytearray(size, arg):
     return bin(int(b'01' + binascii.hexlify(arg), 16))[3:size + 3]
-
-
-def _pack_text(size, arg):
-    value = arg.encode('utf-8')
-
-    return _pack_bytearray(size, bytearray(value))
-
-
-def _unpack_signed_integer(bits):
-    value = int(bits, 2)
-
-    if bits[0] == '1':
-        value -= (1 << len(bits))
-
-    return value
-
-
-def _unpack_unsigned_integer(bits):
-    return int(bits, 2)
-
-
-def _unpack_boolean(bits):
-    return bool(int(bits, 2))
-
-
-def _unpack_float(size, bits):
-    packed = _unpack_bytearray(size, bits)
-
-    if size == 16:
-        value = struct.unpack('>e', packed)[0]
-    elif size == 32:
-        value = struct.unpack('>f', packed)[0]
-    elif size == 64:
-        value = struct.unpack('>d', packed)[0]
-    else:
-        raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
-            size))
-
-    return value
 
 
 def _unpack_bytearray(size, bits):
@@ -125,10 +231,6 @@ def _unpack_bytearray(size, bits):
         bits += (8 - rest) * '0'
 
     return binascii.unhexlify(hex(int('10000000' + bits, 2))[4:].rstrip('L'))
-
-
-def _unpack_text(size, bits):
-    return _unpack_bytearray(size, bits).decode('utf-8')
 
 
 class CompiledFormat(object):
@@ -144,31 +246,18 @@ class CompiledFormat(object):
         infos, byte_order = _parse_format(fmt)
         self._infos = infos
         self._byte_order = byte_order
-        self._number_of_bits_to_unpack = sum([info[1] for info in infos])
+        self._number_of_bits_to_unpack = sum([info.size for info in infos])
         self._number_of_arguments = 0
 
         for info in infos:
-            if info[0] not in 'pP':
+            if not isinstance(info, _Padding):
                 self._number_of_arguments += 1
 
-    def _pack_value(self, type_, size, value, endianness, bits):
-        if type_ == 's':
-            value_bits = _pack_integer(size, value)
-        elif type_ == 'u':
-            value_bits = _pack_integer(size, value)
-        elif type_ == 'f':
-            value_bits = _pack_float(size, value)
-        elif type_ == 'b':
-            value_bits = _pack_boolean(size, value)
-        elif type_ == 't':
-            value_bits = _pack_text(size, value)
-        elif type_ == 'r':
-            value_bits = _pack_bytearray(size, bytearray(value))
-        else:
-            raise Error("bad type '{}' in format".format(type_))
+    def _pack_value(self, info, value, bits):
+        value_bits = info.pack(value)
 
         # Reverse the bit order in little endian values.
-        if endianness == "<":
+        if info.endianness == "<":
             value_bits = value_bits[::-1]
 
         # Reverse bytes order for least significant byte first.
@@ -204,13 +293,11 @@ class CompiledFormat(object):
                     self._number_of_arguments,
                     len(args)))
 
-        for type_, size, endianness in self._infos:
-            if type_ == 'p':
-                bits += size * '0'
-            elif type_ == 'P':
-                bits += size * '1'
+        for info in self._infos:
+            if isinstance(info, _Padding):
+                bits += info.pack()
             else:
-                bits = self._pack_value(type_, size, args[i], endianness, bits)
+                bits = self._pack_value(info, args[i], bits)
                 i += 1
 
         # Padding of last byte.
@@ -249,17 +336,14 @@ class CompiledFormat(object):
         bits = buf_bits[0:offset]
         i = 0
 
-        for type_, size, endianness in self._infos:
-            if type_ in 'pP':
+        for info in self._infos:
+            if isinstance(info, _Padding):
                 if fill_padding:
-                    if type_ == 'p':
-                        bits += size * '0'
-                    else:
-                        bits += size * '1'
+                    bits += info.pack()
                 else:
-                    bits += buf_bits[len(bits):len(bits) + size]
+                    bits += buf_bits[len(bits):len(bits) + info.size]
             else:
-                bits = self._pack_value(type_, size, args[i], endianness, bits)
+                bits = self._pack_value(info, args[i], bits)
                 i += 1
 
         bits += buf_bits[len(bits):]
@@ -291,17 +375,17 @@ class CompiledFormat(object):
         res = []
         offset = 0
 
-        for type_, size, endianness in self._infos:
-            if type_ in 'pP':
+        for info in self._infos:
+            if isinstance(info, _Padding):
                 pass
             else:
                 # Reverse bytes order for least significant byte
                 # first.
                 if self._byte_order == ">":
-                    value_bits = bits[offset:offset + size]
+                    value_bits = bits[offset:offset + info.size]
                 else:
-                    value_bits_tmp = bits[offset:offset + size]
-                    aligned_offset = (size - ((offset + size) % 8))
+                    value_bits_tmp = bits[offset:offset + info.size]
+                    aligned_offset = (info.size - ((offset + info.size) % 8))
                     value_bits = ''
 
                     while aligned_offset > 0:
@@ -312,27 +396,12 @@ class CompiledFormat(object):
                     value_bits += value_bits_tmp
 
                 # Reverse the bit order in little endian values.
-                if endianness == "<":
+                if info.endianness == "<":
                     value_bits = value_bits[::-1]
 
-                if type_ == 's':
-                    value = _unpack_signed_integer(value_bits)
-                elif type_ == 'u':
-                    value = _unpack_unsigned_integer(value_bits)
-                elif type_ == 'f':
-                    value = _unpack_float(size, value_bits)
-                elif type_ == 'b':
-                    value = _unpack_boolean(value_bits)
-                elif type_ == 't':
-                    value = _unpack_text(size, value_bits)
-                elif type_ == 'r':
-                    value = bytes(_unpack_bytearray(size, value_bits))
-                else:
-                    raise Error("bad type '{}' in format".format(type_))
+                res.append(info.unpack(value_bits))
 
-                res.append(value)
-
-            offset += size
+            offset += info.size
 
         return tuple(res)
 

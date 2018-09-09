@@ -54,7 +54,7 @@ class BitStructTest(unittest.TestCase):
         packed = pack('b1P6b1', True, True)
         self.assertEqual(packed, b'\xff')
 
-        packed = pack('u5b2u1', -1, False, 1)
+        packed = pack('u5b2u1', 31, False, 1)
         self.assertEqual(packed, b'\xf9')
 
         packed = pack('b1t24', False, u"Hi!")
@@ -609,6 +609,61 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          'unpack requires at least 24 bits to unpack '
                          '(got 23)')
+
+    def test_pack_integers_value_checks(self):
+        """Pack integer values range checks.
+
+        """
+
+        # Formats with minimum and maximum allowed values.
+        datas = [
+            ('s1', -1, 0),
+            ('s2', -2, 1),
+            ('s3', -4, 3),
+            ('u1',  0, 1),
+            ('u2',  0, 3),
+            ('u3',  0, 7)
+        ]
+
+        for fmt, minimum, maximum in datas:
+            # No exception should be raised for numbers in range.
+            pack(fmt, minimum)
+            pack(fmt, maximum)
+
+            # Numbers out of range.
+            for number in [minimum - 1, maximum + 1]:
+                with self.assertRaises(Error) as cm:
+                    pack(fmt, number)
+
+                self.assertEqual(
+                    str(cm.exception),
+                    '"{}" requires {} <= integer <= {} (got {})'.format(
+                        fmt,
+                        minimum,
+                        maximum,
+                        number))
+
+    def test_pack_raw_values_checks(self):
+        """Pack raw values range checks.
+
+        """
+
+        # Formats with allowed size.
+        datas = [
+            (1, b''),
+            (9, b'\x00')
+        ]
+
+        for size, data in datas:
+            with self.assertRaises(Error) as cm:
+                pack('r{}'.format(size), data)
+
+                self.assertEqual(
+                    str(cm.exception),
+                    '"r{}" requires at least {} bits (got {})'.format(
+                        size,
+                        size,
+                        8 * len(data)))
 
 
 if __name__ == '__main__':
