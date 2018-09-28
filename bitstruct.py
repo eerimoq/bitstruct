@@ -434,8 +434,8 @@ def pack(fmt, *args):
     first. If byteorder is omitted, most significant byte first is
     used.
 
-    There are seven types; ``u``, ``s``, ``f``, ``b``, ``t``, ``r``
-    and ``p``.
+    There are eight types; ``u``, ``s``, ``f``, ``b``, ``t``, ``r``,
+    ``p`` and ``P``.
 
     - ``u`` -- unsigned integer
     - ``s`` -- signed integer
