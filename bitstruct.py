@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
 
 
 class Error(Exception):
@@ -15,15 +15,16 @@ class Error(Exception):
 
 class _Info(object):
 
-    def __init__(self, size):
+    def __init__(self, name, size):
+        self.name = name
         self.size = size
         self.endianness = None
 
 
 class _SignedInteger(_Info):
 
-    def __init__(self, size):
-        super(_SignedInteger, self).__init__(size)
+    def __init__(self, name, size):
+        super(_SignedInteger, self).__init__(name, size)
         self.minimum = -2 ** (size - 1)
         self.maximum = -self.minimum - 1
 
@@ -56,8 +57,8 @@ class _SignedInteger(_Info):
 
 class _UnsignedInteger(_Info):
 
-    def __init__(self, size):
-        super(_UnsignedInteger, self).__init__(size)
+    def __init__(self, name, size):
+        super(_UnsignedInteger, self).__init__(name, size)
         self.maximum = 2 ** size - 1
 
     def pack(self, arg):
@@ -177,7 +178,7 @@ def _parse_format(fmt):
     else:
         byte_order = ''
 
-    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)', fmt)
+    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(:\w+ ?)?', fmt)
 
     if ''.join([''.join(info) for info in parsed_infos]) != fmt:
         raise Error("bad format '{}'".format(fmt + byte_order))
@@ -186,6 +187,7 @@ def _parse_format(fmt):
     # value if none is given for the current value.
     infos = []
     endianness = ">"
+    i = 0
 
     for parsed_info in parsed_infos:
         if parsed_info[0] != "":
@@ -193,23 +195,35 @@ def _parse_format(fmt):
 
         type_ = parsed_info[1]
         size = int(parsed_info[2])
+        name = parsed_info[3]
+
+        if name:
+            name = name.strip(' :')
+        else:
+            name = i
 
         if type_ == 's':
-            info = _SignedInteger(size)
+            info = _SignedInteger(name, size)
+            i += 1
         elif type_ == 'u':
-            info = _UnsignedInteger(size)
+            info = _UnsignedInteger(name, size)
+            i += 1
         elif type_ == 'f':
-            info = _Float(size)
+            info = _Float(name, size)
+            i += 1
         elif type_ == 'b':
-            info = _Boolean(size)
+            info = _Boolean(name, size)
+            i += 1
         elif type_ == 't':
-            info = _Text(size)
+            info = _Text(name, size)
+            i += 1
         elif type_ == 'r':
-            info = _Raw(size)
+            info = _Raw(name, size)
+            i += 1
         elif type_ == 'p':
-            info = _ZeroPadding(size)
+            info = _ZeroPadding(name, size)
         elif type_ == 'P':
-            info = _OnePadding(size)
+            info = _OnePadding(name, size)
         else:
             raise Error("bad char '{}' in format".format(type_))
 
@@ -275,30 +289,14 @@ class CompiledFormat(object):
 
         return bits
 
-    def pack(self, *args):
-        """Return a byte string containing the values v1, v2, ... packed
-        according to the compiled format string. If the total number
-        of bits are not a multiple of 8, padding will be added at the
-        end of the last byte.
-
-        """
-
+    def _pack(self, values):
         bits = ''
-        i = 0
-
-        # Sanity check of the number of arguments.
-        if len(args) < self._number_of_arguments:
-            raise Error(
-                "pack expected {} item(s) for packing (got {})".format(
-                    self._number_of_arguments,
-                    len(args)))
 
         for info in self._infos:
             if isinstance(info, _Padding):
                 bits += info.pack()
             else:
-                bits = self._pack_value(info, args[i], bits)
-                i += 1
+                bits = self._pack_value(info, values[info.name], bits)
 
         # Padding of last byte.
         tail = len(bits) % 8
@@ -308,61 +306,7 @@ class CompiledFormat(object):
 
         return bytes(_unpack_bytearray(len(bits), bits))
 
-    def unpack(self, data):
-        """Unpack `data` (byte string, bytearray or list of integers)
-        according to the compiled format string. The result is a tuple
-        even if it contains exactly one item.
-
-        """
-
-        return self.unpack_from(data)
-
-    def pack_into(self, buf, offset, *args, **kwargs):
-        """Pack given values v1, v2, ... into `buf`, starting at given bit
-        offset `offset`. Give `fill_padding` as ``False`` to leave
-        padding bits in `buf` unmodified.
-
-        """
-
-        # Sanity check of the number of arguments.
-        if len(args) < self._number_of_arguments:
-            raise Error(
-                "pack expected {} item(s) for packing (got {})".format(
-                    self._number_of_arguments,
-                    len(args)))
-
-        fill_padding = kwargs.get('fill_padding', True)
-        buf_bits = _pack_bytearray(8 * len(buf), buf)
-        bits = buf_bits[0:offset]
-        i = 0
-
-        for info in self._infos:
-            if isinstance(info, _Padding):
-                if fill_padding:
-                    bits += info.pack()
-                else:
-                    bits += buf_bits[len(bits):len(bits) + info.size]
-            else:
-                bits = self._pack_value(info, args[i], bits)
-                i += 1
-
-        bits += buf_bits[len(bits):]
-
-        if len(bits) > len(buf_bits):
-            raise Error(
-                'pack requires a buffer of at least {} bits'.format(
-                    len(bits)))
-
-        buf[:] = _unpack_bytearray(len(bits), bits)
-
-    def unpack_from(self, data, offset=0):
-        """Unpack `data` (byte string, bytearray or list of integers)
-        according to given format string `fmt`, starting at given bit
-        offset `offset`. The result is a tuple even if it contains
-        exactly one item.
-
-        """
-
+    def _unpack_from(self, data, offset):
         bits = bin(int(b'01' + binascii.hexlify(bytearray(data)), 16))[3 + offset:]
 
         # Sanity check.
@@ -372,7 +316,6 @@ class CompiledFormat(object):
                     self._number_of_bits_to_unpack,
                     len(bits)))
 
-        res = []
         offset = 0
 
         for info in self._infos:
@@ -399,11 +342,104 @@ class CompiledFormat(object):
                 if info.endianness == "<":
                     value_bits = value_bits[::-1]
 
-                res.append(info.unpack(value_bits))
+                yield info, info.unpack(value_bits)
 
             offset += info.size
 
-        return tuple(res)
+    def _pack_into(self, buf, offset, data, **kwargs):
+        fill_padding = kwargs.get('fill_padding', True)
+        buf_bits = _pack_bytearray(8 * len(buf), buf)
+        bits = buf_bits[0:offset]
+        i = 0
+
+        for info in self._infos:
+            if isinstance(info, _Padding):
+                if fill_padding:
+                    bits += info.pack()
+                else:
+                    bits += buf_bits[len(bits):len(bits) + info.size]
+            else:
+                bits = self._pack_value(info, data[info.name], bits)
+                i += 1
+
+        bits += buf_bits[len(bits):]
+
+        if len(bits) > len(buf_bits):
+            raise Error(
+                'pack requires a buffer of at least {} bits'.format(
+                    len(bits)))
+
+        buf[:] = _unpack_bytearray(len(bits), bits)
+
+    def pack(self, *args):
+        """Return a byte string containing the values v1, v2, ... packed
+        according to the compiled format string. If the total number
+        of bits are not a multiple of 8, padding will be added at the
+        end of the last byte.
+
+        """
+
+        # Sanity check of the number of arguments.
+        if len(args) < self._number_of_arguments:
+            raise Error(
+                "pack expected {} item(s) for packing (got {})".format(
+                    self._number_of_arguments,
+                    len(args)))
+
+        return self._pack(args)
+
+    def unpack(self, data):
+        """Unpack `data` (byte string, bytearray or list of integers)
+        according to the compiled format string. The result is a tuple
+        even if it contains exactly one item.
+
+        """
+
+        return self.unpack_from(data)
+
+    def pack_into(self, buf, offset, *args, **kwargs):
+        """Pack given values v1, v2, ... into `buf`, starting at given bit
+        offset `offset`. Give `fill_padding` as ``False`` to leave
+        padding bits in `buf` unmodified.
+
+        """
+
+        # Sanity check of the number of arguments.
+        if len(args) < self._number_of_arguments:
+            raise Error(
+                "pack expected {} item(s) for packing (got {})".format(
+                    self._number_of_arguments,
+                    len(args)))
+
+        self._pack_into(buf, offset, args, **kwargs)
+
+    def unpack_from(self, data, offset=0):
+        """Unpack `data` (byte string, bytearray or list of integers)
+        according to given format string `fmt`, starting at given bit
+        offset `offset`. The result is a tuple even if it contains
+        exactly one item.
+
+        """
+
+        return tuple([v[1] for v in self._unpack_from(data, offset)])
+
+    def pack_dict(self, data):
+        try:
+            return self._pack(data)
+        except KeyError as e:
+            raise Error('{} not found in data dictionary'.format(str(e)))
+
+    def unpack_dict(self, data):
+        return self.unpack_from_dict(data)
+
+    def pack_into_dict(self, buf, offset, data, **kwargs):
+        try:
+            self._pack_into(buf, offset, data, **kwargs)
+        except KeyError as e:
+            raise Error('{} not found in data dictionary'.format(str(e)))
+
+    def unpack_from_dict(self, data, offset=0):
+        return {info.name: v for info, v in self._unpack_from(data, offset)}
 
     def calcsize(self):
         """Return the number of bits in the compiled format string.
@@ -495,6 +531,25 @@ def unpack_from(fmt, data, offset=0):
     """
 
     return CompiledFormat(fmt).unpack_from(data, offset)
+
+
+def pack_dict(fmt, data):
+    return CompiledFormat(fmt).pack_dict(data)
+
+
+def unpack_dict(fmt, data):
+    return CompiledFormat(fmt).unpack_dict(data)
+
+
+def pack_into_dict(fmt, buf, offset, data, **kwargs):
+    return CompiledFormat(fmt).pack_into_dict(buf,
+                                              offset,
+                                              data,
+                                              **kwargs)
+
+
+def unpack_from_dict(fmt, data, offset=0):
+    return CompiledFormat(fmt).unpack_from_dict(data, offset)
 
 
 def calcsize(fmt):

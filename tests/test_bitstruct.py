@@ -665,6 +665,51 @@ class BitStructTest(unittest.TestCase):
                         size,
                         8 * len(data)))
 
+    def test_pack_unpack_dict(self):
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        packed = b'\x3e\x82\x16'
+        fmt = 'u1:foo u1:bar s6:fie u7:fum u9:fam'
+
+        self.assertEqual(pack_dict(fmt, unpacked), packed)
+        self.assertEqual(unpack_dict(fmt, packed), unpacked)
+
+    def test_pack_into_unpack_from_dict(self):
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        packed = b'\x3e\x82\x16'
+        fmt = 'u1:foo u1:bar s6:fie u7:fum u9:fam'
+
+        actual = bytearray(3)
+        pack_into_dict(fmt, actual, 0, unpacked)
+        self.assertEqual(actual, packed)
+        self.assertEqual(unpack_from_dict(fmt, packed), unpacked)
+
+    def test_pack_dict_missing_key(self):
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65
+        }
+        fmt = 'u1:foo u1:bar s6:fie u7:fum u9:fam'
+
+        with self.assertRaises(Error) as cm:
+            pack_dict(fmt, unpacked)
+
+        self.assertEqual(str(cm.exception),
+                         "'fam' not found in data dictionary")
+
 
 if __name__ == '__main__':
     unittest.main()
