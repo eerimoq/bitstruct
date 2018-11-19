@@ -18,6 +18,10 @@ Functions
 .. autofunction:: bitstruct.unpack
 .. autofunction:: bitstruct.pack_into
 .. autofunction:: bitstruct.unpack_from
+.. autofunction:: bitstruct.pack_dict
+.. autofunction:: bitstruct.unpack_dict
+.. autofunction:: bitstruct.pack_into_dict
+.. autofunction:: bitstruct.unpack_from_dict
 .. autofunction:: bitstruct.calcsize
 .. autofunction:: bitstruct.byteswap
 .. autofunction:: bitstruct.compile
@@ -26,4 +30,12 @@ Classes
 =======
 
 .. autoclass:: bitstruct.CompiledFormat
-    :members:
+
+   .. automethod:: pack
+   .. automethod:: unpack
+   .. automethod:: pack_into
+   .. automethod:: unpack_from
+   .. automethod:: pack_dict
+   .. automethod:: unpack_dict
+   .. automethod:: pack_into_dict
+   .. automethod:: unpack_from_dict

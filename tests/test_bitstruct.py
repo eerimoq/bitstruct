@@ -710,6 +710,21 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "'fam' not found in data dictionary")
 
+    def test_compile_formats(self):
+        fmts = [
+            ('u1s2p3', (1, -1)),
+            ('u1 s2 p3', (1, -1)),
+            ('u1:a s2:b p3:c', {'a': 1, 'b': -1})
+        ]
+
+        for fmt, decoded in fmts:
+            if isinstance(decoded, tuple):
+                packed = pack(fmt, *decoded)
+            else:
+                packed = pack_dict(fmt, decoded)
+
+            self.assertEqual(packed, b'\xe0')
+
 
 if __name__ == '__main__':
     unittest.main()

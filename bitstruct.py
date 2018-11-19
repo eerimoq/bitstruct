@@ -178,7 +178,7 @@ def _parse_format(fmt):
     else:
         byte_order = ''
 
-    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(:\w+ ?)?', fmt)
+    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(:\w+ ?| ?)?', fmt)
 
     if ''.join([''.join(info) for info in parsed_infos]) != fmt:
         raise Error("bad format '{}'".format(fmt + byte_order))
@@ -195,11 +195,9 @@ def _parse_format(fmt):
 
         type_ = parsed_info[1]
         size = int(parsed_info[2])
-        name = parsed_info[3]
+        name = parsed_info[3].strip(' :')
 
-        if name:
-            name = name.strip(' :')
-        else:
+        if not name:
             name = i
 
         if type_ == 's':
@@ -372,10 +370,7 @@ class CompiledFormat(object):
         buf[:] = _unpack_bytearray(len(bits), bits)
 
     def pack(self, *args):
-        """Return a byte string containing the values v1, v2, ... packed
-        according to the compiled format string. If the total number
-        of bits are not a multiple of 8, padding will be added at the
-        end of the last byte.
+        """See :func:`pack()`.
 
         """
 
@@ -389,18 +384,14 @@ class CompiledFormat(object):
         return self._pack(args)
 
     def unpack(self, data):
-        """Unpack `data` (byte string, bytearray or list of integers)
-        according to the compiled format string. The result is a tuple
-        even if it contains exactly one item.
+        """See :func:`unpack()`.
 
         """
 
         return self.unpack_from(data)
 
     def pack_into(self, buf, offset, *args, **kwargs):
-        """Pack given values v1, v2, ... into `buf`, starting at given bit
-        offset `offset`. Give `fill_padding` as ``False`` to leave
-        padding bits in `buf` unmodified.
+        """See :func:`pack_into()`.
 
         """
 
@@ -414,31 +405,44 @@ class CompiledFormat(object):
         self._pack_into(buf, offset, args, **kwargs)
 
     def unpack_from(self, data, offset=0):
-        """Unpack `data` (byte string, bytearray or list of integers)
-        according to given format string `fmt`, starting at given bit
-        offset `offset`. The result is a tuple even if it contains
-        exactly one item.
+        """See :func:`unpack_from()`.
 
         """
 
         return tuple([v[1] for v in self._unpack_from(data, offset)])
 
     def pack_dict(self, data):
+        """See :func:`pack_dict()`.
+
+        """
+
         try:
             return self._pack(data)
         except KeyError as e:
             raise Error('{} not found in data dictionary'.format(str(e)))
 
     def unpack_dict(self, data):
+        """See :func:`unpack_dict()`.
+
+        """
+
         return self.unpack_from_dict(data)
 
     def pack_into_dict(self, buf, offset, data, **kwargs):
+        """See :func:`pack_into_dict()`.
+
+        """
+
         try:
             self._pack_into(buf, offset, data, **kwargs)
         except KeyError as e:
             raise Error('{} not found in data dictionary'.format(str(e)))
 
     def unpack_from_dict(self, data, offset=0):
+        """See :func:`unpack_from_dict()`.
+
+        """
+
         return {info.name: v for info, v in self._unpack_from(data, offset)}
 
     def calcsize(self):
@@ -493,6 +497,9 @@ def pack(fmt, *args):
     Same format string, but with LSB first (``<`` prefix) and least
     significant byte first (``<`` suffix): ``'<u1u3p7s16<'``
 
+    It is allowed to separate groups with a single space for better
+    readability.
+
     """
 
     return CompiledFormat(fmt).pack(*args)
@@ -534,14 +541,39 @@ def unpack_from(fmt, data, offset=0):
 
 
 def pack_dict(fmt, data):
+    """Same as :func:`pack()`, but `fmt` must have named format groups and
+    data is read from a dictionary.
+
+    A named format group is a group (bitorder-type-length) with a
+    ``:<name>`` suffix. Named format groups must be separated by a
+    single space, as in the example below.
+
+    >>> pack_dict('u4:foo u4:bar', {'foo': 1, 'bar': 2})
+    b'\\x12'
+
+    """
+
     return CompiledFormat(fmt).pack_dict(data)
 
 
 def unpack_dict(fmt, data):
+    """Same as :func:`unpack()`, but `fmt` must have named format groups
+    and returns a dictionary.
+
+    >>> unpack_dict('u4:foo u4:bar', b'\\x12')
+    {'foo': 1, 'bar': 2}
+
+    """
+
     return CompiledFormat(fmt).unpack_dict(data)
 
 
 def pack_into_dict(fmt, buf, offset, data, **kwargs):
+    """Same as :func:`pack_into()`, but `fmt` must have named format
+    groups and data is read from a dictionary.
+
+    """
+
     return CompiledFormat(fmt).pack_into_dict(buf,
                                               offset,
                                               data,
@@ -549,11 +581,19 @@ def pack_into_dict(fmt, buf, offset, data, **kwargs):
 
 
 def unpack_from_dict(fmt, data, offset=0):
+    """Same as :func:`unpack_from_dict()`, but `fmt` must have named
+    format groups and returns a dictionary.
+
+    """
+
     return CompiledFormat(fmt).unpack_from_dict(data, offset)
 
 
 def calcsize(fmt):
     """Return the number of bits in given format string `fmt`.
+
+    >>> calcsize('u1s3p4')
+    8
 
     """
 
