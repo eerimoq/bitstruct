@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "4.1.0"
+__version__ = "5.0.0"
 
 
 class Error(Exception):
@@ -171,14 +171,14 @@ class _Text(_Info):
         return _unpack_bytearray(self.size, bits).decode('utf-8')
 
 
-def _parse_format(fmt):
+def _parse_format(fmt, names):
     if fmt and fmt[-1] in '><':
         byte_order = fmt[-1]
         fmt = fmt[:-1]
     else:
         byte_order = ''
 
-    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(:\w+ ?| ?)?', fmt)
+    parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(\s*)', fmt)
 
     if ''.join([''.join(info) for info in parsed_infos]) != fmt:
         raise Error("bad format '{}'".format(fmt + byte_order))
@@ -195,10 +195,11 @@ def _parse_format(fmt):
 
         type_ = parsed_info[1]
         size = int(parsed_info[2])
-        name = parsed_info[3].strip(' :')
 
-        if not name:
+        if names is None:
             name = i
+        elif type_ not in 'pP':
+            name = names[i]
 
         if type_ == 's':
             info = _SignedInteger(name, size)
@@ -254,8 +255,8 @@ class CompiledFormat(object):
 
     """
 
-    def __init__(self, fmt):
-        infos, byte_order = _parse_format(fmt)
+    def __init__(self, fmt, names=None):
+        infos, byte_order = _parse_format(fmt, names)
         self._infos = infos
         self._byte_order = byte_order
         self._number_of_bits_to_unpack = sum([info.size for info in infos])
@@ -540,53 +541,54 @@ def unpack_from(fmt, data, offset=0):
     return CompiledFormat(fmt).unpack_from(data, offset)
 
 
-def pack_dict(fmt, data):
-    """Same as :func:`pack()`, but `fmt` must have named format groups and
-    data is read from a dictionary.
+def pack_dict(fmt, names, data):
+    """Same as :func:`pack()`, but data is read from a dictionary.
 
-    A named format group is a group (bitorder-type-length) with a
-    ``:<name>`` suffix. Named format groups must be separated by a
-    single space, as in the example below.
+    The names list `names` contains the format group names, used as
+    keys in the dictionary.
 
-    >>> pack_dict('u4:foo u4:bar', {'foo': 1, 'bar': 2})
+    >>> pack_dict('u4u4', ['foo', 'bar'], {'foo': 1, 'bar': 2})
     b'\\x12'
 
     """
 
-    return CompiledFormat(fmt).pack_dict(data)
+    return CompiledFormat(fmt, names).pack_dict(data)
 
 
-def unpack_dict(fmt, data):
-    """Same as :func:`unpack()`, but `fmt` must have named format groups
-    and returns a dictionary.
+def unpack_dict(fmt, names, data):
+    """Same as :func:`unpack()`, but returns a dictionary.
+
+    See :func:`pack_dict()` for details on `names`.
 
     >>> unpack_dict('u4:foo u4:bar', b'\\x12')
     {'foo': 1, 'bar': 2}
 
     """
 
-    return CompiledFormat(fmt).unpack_dict(data)
+    return CompiledFormat(fmt, names).unpack_dict(data)
 
 
-def pack_into_dict(fmt, buf, offset, data, **kwargs):
-    """Same as :func:`pack_into()`, but `fmt` must have named format
-    groups and data is read from a dictionary.
+def pack_into_dict(fmt, names, buf, offset, data, **kwargs):
+    """Same as :func:`pack_into()`, but data is read from a dictionary.
 
-    """
-
-    return CompiledFormat(fmt).pack_into_dict(buf,
-                                              offset,
-                                              data,
-                                              **kwargs)
-
-
-def unpack_from_dict(fmt, data, offset=0):
-    """Same as :func:`unpack_from_dict()`, but `fmt` must have named
-    format groups and returns a dictionary.
+    See :func:`pack_dict()` for details on `names`.
 
     """
 
-    return CompiledFormat(fmt).unpack_from_dict(data, offset)
+    return CompiledFormat(fmt, names).pack_into_dict(buf,
+                                                     offset,
+                                                     data,
+                                                     **kwargs)
+
+
+def unpack_from_dict(fmt, names, data, offset=0):
+    """Same as :func:`unpack_from_dict()`, but returns a dictionary.
+
+    See :func:`pack_dict()` for details on `names`.
+
+    """
+
+    return CompiledFormat(fmt, names).unpack_from_dict(data, offset)
 
 
 def calcsize(fmt):
