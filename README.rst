@@ -70,13 +70,25 @@ wrapping the result in a named tuple:
 
     >>> from bitstruct import *
     >>> from collections import namedtuple
-    >>> MyName = namedtuple('myname', [ 'a', 'b', 'c', 'd' ])
+    >>> MyName = namedtuple('myname', ['a', 'b', 'c', 'd'])
     >>> unpacked = unpack('u1u3u4s16', b'\xa3\xff\xfc')
     >>> myname = MyName(*unpacked)
     >>> myname
     myname(a=1, b=2, c=3, d=-4)
     >>> myname.c
     3
+
+Use the `pack_dict`_ and `unpack_dict`_ functions to pack/unpack
+values in dictionaries:
+
+.. code-block:: python
+
+    >>> from bitstruct import *
+    >>> names = ['a', 'b', 'c', 'd']
+    >>> pack_dict('u1u3u4s16', names, {'a': 1, 'b': 2, 'c': 3, 'd': -4})
+    b'\xa3\xff\xfc'
+    >>> unpack_dict('u1u3u4s16', names, b'\xa3\xff\xfc')
+    {'a': 1, 'b': 2, 'c': 3, 'd': -4}
 
 An example of `packing`_ and `unpacking`_ an unsigned integer, a
 signed integer, a float, a boolean, a byte string and a string:
@@ -170,6 +182,10 @@ Contributing
 .. _pack into: http://bitstruct.readthedocs.io/en/latest/#bitstruct.pack_into
 
 .. _unpack from: http://bitstruct.readthedocs.io/en/latest/#bitstruct.unpack_from
+
+.. _pack_dict: http://bitstruct.readthedocs.io/en/latest/#bitstruct.pack_dict
+
+.. _unpack_dict: http://bitstruct.readthedocs.io/en/latest/#bitstruct.unpack_dict
 
 .. _byteswap: http://bitstruct.readthedocs.io/en/latest/#bitstruct.byteswap
 

@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 
 
 class Error(Exception):
@@ -560,7 +560,7 @@ def unpack_dict(fmt, names, data):
 
     See :func:`pack_dict()` for details on `names`.
 
-    >>> unpack_dict('u4:foo u4:bar', b'\\x12')
+    >>> unpack_dict('u4u4', ['foo', 'bar'], b'\\x12')
     {'foo': 1, 'bar': 2}
 
     """
