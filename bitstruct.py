@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "5.1.0"
+__version__ = "5.2.0"
 
 
 class Error(Exception):
@@ -622,11 +622,13 @@ def byteswap(fmt, data, offset=0):
     return data_swapped.getvalue()
 
 
-def compile(fmt):
+def compile(fmt, names=None):
     """Compile given format string `fmt` and return a
     :class:`~bitstruct.CompiledFormat` object that can be used to pack
     and/or unpack data multiple times.
 
+    See :func:`pack_dict()` for details on `names`.
+
     """
 
-    return CompiledFormat(fmt)
+    return CompiledFormat(fmt, names)

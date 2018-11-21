@@ -713,7 +713,7 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "'fam' not found in data dictionary")
 
-    def test_compile_formats(self):
+    def test_compile_pack_unpack_formats(self):
         fmts = [
             ('u1s2p3',         None, (1, -1)),
             ('u1 s2 p3',       None, (1, -1)),
@@ -722,11 +722,16 @@ class BitStructTest(unittest.TestCase):
 
         for fmt, names, decoded in fmts:
             if names is None:
-                packed = pack(fmt, *decoded)
+                cf = bitstruct.compile(fmt)
+                packed_1 = cf.pack(*decoded)
+                packed_2 = pack(fmt, *decoded)
             else:
-                packed = pack_dict(fmt, names, decoded)
+                cf = bitstruct.compile(fmt, names)
+                packed_1 = cf.pack_dict(decoded)
+                packed_2 = pack_dict(fmt, names, decoded)
 
-            self.assertEqual(packed, b'\xe0')
+            self.assertEqual(packed_1, b'\xe0')
+            self.assertEqual(packed_2, b'\xe0')
 
 
 if __name__ == '__main__':
