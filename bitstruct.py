@@ -337,7 +337,6 @@ class _CompiledFormat(object):
         fill_padding = kwargs.get('fill_padding', True)
         buf_bits = _pack_bytearray(8 * len(buf), buf)
         bits = buf_bits[0:offset]
-        i = 0
 
         for info in self._infos:
             if isinstance(info, _Padding):
@@ -347,7 +346,6 @@ class _CompiledFormat(object):
                     bits += buf_bits[len(bits):len(bits) + info.size]
             else:
                 bits = self.pack_value(info, data[info.name], bits)
-                i += 1
 
         bits += buf_bits[len(bits):]
 
