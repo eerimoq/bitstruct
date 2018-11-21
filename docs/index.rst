@@ -31,11 +31,14 @@ Classes
 
 .. autoclass:: bitstruct.CompiledFormat
 
-   .. automethod:: pack
-   .. automethod:: unpack
-   .. automethod:: pack_into
-   .. automethod:: unpack_from
-   .. automethod:: pack_dict
-   .. automethod:: unpack_dict
-   .. automethod:: pack_into_dict
-   .. automethod:: unpack_from_dict
+   .. automethod:: bitstruct.CompiledFormat.pack
+   .. automethod:: bitstruct.CompiledFormat.unpack
+   .. automethod:: bitstruct.CompiledFormat.pack_into
+   .. automethod:: bitstruct.CompiledFormat.unpack_from
+
+.. autoclass:: bitstruct.CompiledFormatDict
+
+   .. automethod:: bitstruct.CompiledFormatDict.pack
+   .. automethod:: bitstruct.CompiledFormatDict.unpack
+   .. automethod:: bitstruct.CompiledFormatDict.pack_into
+   .. automethod:: bitstruct.CompiledFormatDict.unpack_from

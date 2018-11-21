@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "5.2.1"
+__version__ = "6.0.0"
 
 
 class Error(Exception):
@@ -246,27 +246,15 @@ def _unpack_bytearray(size, bits):
     return binascii.unhexlify(hex(int('10000000' + bits, 2))[4:].rstrip('L'))
 
 
-class CompiledFormat(object):
-    """A compiled format string that can be used to pack and/or unpack
-    data multiple times.
-
-    Instances of this class are created by the factory function
-    :func:`~bitstruct.compile()`.
-
-    """
+class _CompiledFormat(object):
 
     def __init__(self, fmt, names=None):
         infos, byte_order = _parse_format(fmt, names)
         self._infos = infos
         self._byte_order = byte_order
         self._number_of_bits_to_unpack = sum([info.size for info in infos])
-        self._number_of_arguments = 0
 
-        for info in infos:
-            if not isinstance(info, _Padding):
-                self._number_of_arguments += 1
-
-    def _pack_value(self, info, value, bits):
+    def pack_value(self, info, value, bits):
         value_bits = info.pack(value)
 
         # Reverse the bit order in little endian values.
@@ -288,14 +276,14 @@ class CompiledFormat(object):
 
         return bits
 
-    def _pack(self, values):
+    def pack_any(self, values):
         bits = ''
 
         for info in self._infos:
             if isinstance(info, _Padding):
                 bits += info.pack()
             else:
-                bits = self._pack_value(info, values[info.name], bits)
+                bits = self.pack_value(info, values[info.name], bits)
 
         # Padding of last byte.
         tail = len(bits) % 8
@@ -305,7 +293,7 @@ class CompiledFormat(object):
 
         return bytes(_unpack_bytearray(len(bits), bits))
 
-    def _unpack_from(self, data, offset):
+    def unpack_from_any(self, data, offset):
         bits = bin(int(b'01' + binascii.hexlify(bytearray(data)), 16))[3 + offset:]
 
         # Sanity check.
@@ -345,7 +333,7 @@ class CompiledFormat(object):
 
             offset += info.size
 
-    def _pack_into(self, buf, offset, data, **kwargs):
+    def pack_into_any(self, buf, offset, data, **kwargs):
         fill_padding = kwargs.get('fill_padding', True)
         buf_bits = _pack_bytearray(8 * len(buf), buf)
         bits = buf_bits[0:offset]
@@ -358,7 +346,7 @@ class CompiledFormat(object):
                 else:
                     bits += buf_bits[len(bits):len(bits) + info.size]
             else:
-                bits = self._pack_value(info, data[info.name], bits)
+                bits = self.pack_value(info, data[info.name], bits)
                 i += 1
 
         bits += buf_bits[len(bits):]
@@ -370,88 +358,112 @@ class CompiledFormat(object):
 
         buf[:] = _unpack_bytearray(len(bits), bits)
 
-    def pack(self, *args):
-        """See :func:`pack()`.
-
-        """
-
-        # Sanity check of the number of arguments.
-        if len(args) < self._number_of_arguments:
-            raise Error(
-                "pack expected {} item(s) for packing (got {})".format(
-                    self._number_of_arguments,
-                    len(args)))
-
-        return self._pack(args)
-
-    def unpack(self, data):
-        """See :func:`unpack()`.
-
-        """
-
-        return self.unpack_from(data)
-
-    def pack_into(self, buf, offset, *args, **kwargs):
-        """See :func:`pack_into()`.
-
-        """
-
-        # Sanity check of the number of arguments.
-        if len(args) < self._number_of_arguments:
-            raise Error(
-                "pack expected {} item(s) for packing (got {})".format(
-                    self._number_of_arguments,
-                    len(args)))
-
-        self._pack_into(buf, offset, args, **kwargs)
-
-    def unpack_from(self, data, offset=0):
-        """See :func:`unpack_from()`.
-
-        """
-
-        return tuple([v[1] for v in self._unpack_from(data, offset)])
-
-    def pack_dict(self, data):
-        """See :func:`pack_dict()`.
-
-        """
-
-        try:
-            return self._pack(data)
-        except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
-
-    def unpack_dict(self, data):
-        """See :func:`unpack_dict()`.
-
-        """
-
-        return self.unpack_from_dict(data)
-
-    def pack_into_dict(self, buf, offset, data, **kwargs):
-        """See :func:`pack_into_dict()`.
-
-        """
-
-        try:
-            self._pack_into(buf, offset, data, **kwargs)
-        except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
-
-    def unpack_from_dict(self, data, offset=0):
-        """See :func:`unpack_from_dict()`.
-
-        """
-
-        return {info.name: v for info, v in self._unpack_from(data, offset)}
-
     def calcsize(self):
         """Return the number of bits in the compiled format string.
 
         """
 
         return self._number_of_bits_to_unpack
+
+
+class CompiledFormat(_CompiledFormat):
+    """A compiled format string that can be used to pack and/or unpack
+    data multiple times.
+
+    Instances of this class are created by the factory function
+    :func:`~bitstruct.compile()`.
+
+    """
+
+    def __init__(self, fmt):
+        super(CompiledFormat, self).__init__(fmt, None)
+        self._number_of_arguments = 0
+
+        for info in self._infos:
+            if not isinstance(info, _Padding):
+                self._number_of_arguments += 1
+
+    def pack(self, *args):
+        """See :func:`~bitstruct.pack()`.
+
+        """
+
+        # Sanity check of the number of arguments.
+        if len(args) < self._number_of_arguments:
+            raise Error(
+                "pack expected {} item(s) for packing (got {})".format(
+                    self._number_of_arguments,
+                    len(args)))
+
+        return self.pack_any(args)
+
+    def unpack(self, data):
+        """See :func:`~bitstruct.unpack()`.
+
+        """
+
+        return self.unpack_from(data)
+
+    def pack_into(self, buf, offset, *args, **kwargs):
+        """See :func:`~bitstruct.pack_into()`.
+
+        """
+
+        # Sanity check of the number of arguments.
+        if len(args) < self._number_of_arguments:
+            raise Error(
+                "pack expected {} item(s) for packing (got {})".format(
+                    self._number_of_arguments,
+                    len(args)))
+
+        self.pack_into_any(buf, offset, args, **kwargs)
+
+    def unpack_from(self, data, offset=0):
+        """See :func:`~bitstruct.unpack_from()`.
+
+        """
+
+        return tuple([v[1] for v in self.unpack_from_any(data, offset)])
+
+
+class CompiledFormatDict(_CompiledFormat):
+    """See :class:`~bitstruct.CompiledFormat`.
+
+    """
+
+    def pack(self, data):
+        """See :func:`~bitstruct.pack_dict()`.
+
+        """
+
+        try:
+            return self.pack_any(data)
+        except KeyError as e:
+            raise Error('{} not found in data dictionary'.format(str(e)))
+
+    def unpack(self, data):
+        """See :func:`~bitstruct.unpack_dict()`.
+
+        """
+
+        return self.unpack_from(data)
+
+    def pack_into(self, buf, offset, data, **kwargs):
+        """See :func:`~bitstruct.pack_into_dict()`.
+
+        """
+
+        try:
+            self.pack_into_any(buf, offset, data, **kwargs)
+        except KeyError as e:
+            raise Error('{} not found in data dictionary'.format(str(e)))
+
+    def unpack_from(self, data, offset=0):
+        """See :func:`~bitstruct.unpack_from_dict()`.
+
+        """
+
+        return {info.name: v for info, v in self.unpack_from_any(data, offset)}
 
 
 def pack(fmt, *args):
@@ -542,7 +554,8 @@ def unpack_from(fmt, data, offset=0):
 
 
 def pack_dict(fmt, names, data):
-    """Same as :func:`pack()`, but data is read from a dictionary.
+    """Same as :func:`~bitstruct.pack()`, but data is read from a
+    dictionary.
 
     The names list `names` contains the format group names, used as
     keys in the dictionary.
@@ -552,43 +565,45 @@ def pack_dict(fmt, names, data):
 
     """
 
-    return CompiledFormat(fmt, names).pack_dict(data)
+    return CompiledFormatDict(fmt, names).pack(data)
 
 
 def unpack_dict(fmt, names, data):
-    """Same as :func:`unpack()`, but returns a dictionary.
+    """Same as :func:`~bitstruct.unpack()`, but returns a dictionary.
 
-    See :func:`pack_dict()` for details on `names`.
+    See :func:`~bitstruct.pack_dict()` for details on `names`.
 
     >>> unpack_dict('u4u4', ['foo', 'bar'], b'\\x12')
     {'foo': 1, 'bar': 2}
 
     """
 
-    return CompiledFormat(fmt, names).unpack_dict(data)
+    return CompiledFormatDict(fmt, names).unpack(data)
 
 
 def pack_into_dict(fmt, names, buf, offset, data, **kwargs):
-    """Same as :func:`pack_into()`, but data is read from a dictionary.
+    """Same as :func:`~bitstruct.pack_into()`, but data is read from a
+    dictionary.
 
-    See :func:`pack_dict()` for details on `names`.
+    See :func:`~bitstruct.pack_dict()` for details on `names`.
 
     """
 
-    return CompiledFormat(fmt, names).pack_into_dict(buf,
-                                                     offset,
-                                                     data,
-                                                     **kwargs)
+    return CompiledFormatDict(fmt, names).pack_into(buf,
+                                                    offset,
+                                                    data,
+                                                    **kwargs)
 
 
 def unpack_from_dict(fmt, names, data, offset=0):
-    """Same as :func:`unpack_from_dict()`, but returns a dictionary.
+    """Same as :func:`~bitstruct.unpack_from_dict()`, but returns a
+    dictionary.
 
-    See :func:`pack_dict()` for details on `names`.
+    See :func:`~bitstruct.pack_dict()` for details on `names`.
 
     """
 
-    return CompiledFormat(fmt, names).unpack_from_dict(data, offset)
+    return CompiledFormatDict(fmt, names).unpack_from(data, offset)
 
 
 def calcsize(fmt):
@@ -623,12 +638,18 @@ def byteswap(fmt, data, offset=0):
 
 
 def compile(fmt, names=None):
-    """Compile given format string `fmt` and return a
-    :class:`~bitstruct.CompiledFormat` object that can be used to pack
-    and/or unpack data multiple times.
+    """Compile given format string `fmt` and return a compiled format
+    object that can be used to pack and/or unpack data multiple times.
 
-    See :func:`pack_dict()` for details on `names`.
+    Returns a :class:`~bitstruct.CompiledFormat` object if `names` is
+    ``None``, and otherwise a :class:`~bitstruct.CompiledFormatDict`
+    object.
+
+    See :func:`~bitstruct.pack_dict()` for details on `names`.
 
     """
 
-    return CompiledFormat(fmt, names)
+    if names is None:
+        return CompiledFormat(fmt)
+    else:
+        return CompiledFormatDict(fmt, names)

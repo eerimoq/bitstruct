@@ -727,7 +727,7 @@ class BitStructTest(unittest.TestCase):
                 packed_2 = pack(fmt, *decoded)
             else:
                 cf = bitstruct.compile(fmt, names)
-                packed_1 = cf.pack_dict(decoded)
+                packed_1 = cf.pack(decoded)
                 packed_2 = pack_dict(fmt, names, decoded)
 
             self.assertEqual(packed_1, b'\xe0')
