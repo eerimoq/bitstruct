@@ -733,6 +733,10 @@ class BitStructTest(unittest.TestCase):
             self.assertEqual(packed_1, b'\xe0')
             self.assertEqual(packed_2, b'\xe0')
 
+    def test_compile_formats(self):
+        bitstruct.compile('p1u1')
+        bitstruct.compile('p1u1', ['a'])
+
 
 if __name__ == '__main__':
     unittest.main()

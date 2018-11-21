@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "5.2.0"
+__version__ = "5.2.1"
 
 
 class Error(Exception):
@@ -15,16 +15,16 @@ class Error(Exception):
 
 class _Info(object):
 
-    def __init__(self, name, size):
-        self.name = name
+    def __init__(self, size, name=None):
         self.size = size
+        self.name = name
         self.endianness = None
 
 
 class _SignedInteger(_Info):
 
-    def __init__(self, name, size):
-        super(_SignedInteger, self).__init__(name, size)
+    def __init__(self, size, name):
+        super(_SignedInteger, self).__init__(size, name)
         self.minimum = -2 ** (size - 1)
         self.maximum = -self.minimum - 1
 
@@ -57,8 +57,8 @@ class _SignedInteger(_Info):
 
 class _UnsignedInteger(_Info):
 
-    def __init__(self, name, size):
-        super(_UnsignedInteger, self).__init__(name, size)
+    def __init__(self, size, name):
+        super(_UnsignedInteger, self).__init__(size, name)
         self.maximum = 2 ** size - 1
 
     def pack(self, arg):
@@ -202,27 +202,27 @@ def _parse_format(fmt, names):
             name = names[i]
 
         if type_ == 's':
-            info = _SignedInteger(name, size)
+            info = _SignedInteger(size, name)
             i += 1
         elif type_ == 'u':
-            info = _UnsignedInteger(name, size)
+            info = _UnsignedInteger(size, name)
             i += 1
         elif type_ == 'f':
-            info = _Float(name, size)
+            info = _Float(size, name)
             i += 1
         elif type_ == 'b':
-            info = _Boolean(name, size)
+            info = _Boolean(size, name)
             i += 1
         elif type_ == 't':
-            info = _Text(name, size)
+            info = _Text(size, name)
             i += 1
         elif type_ == 'r':
-            info = _Raw(name, size)
+            info = _Raw(size, name)
             i += 1
         elif type_ == 'p':
-            info = _ZeroPadding(name, size)
+            info = _ZeroPadding(size)
         elif type_ == 'P':
-            info = _OnePadding(name, size)
+            info = _OnePadding(size)
         else:
             raise Error("bad char '{}' in format".format(type_))
 
