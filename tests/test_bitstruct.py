@@ -713,6 +713,13 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "'fam' not found in data dictionary")
 
+        with self.assertRaises(Error) as cm:
+            data = bytearray(3)
+            pack_into_dict(fmt, names, data, 0, unpacked)
+
+        self.assertEqual(str(cm.exception),
+                         "'fam' not found in data dictionary")
+
     def test_compile_pack_unpack_formats(self):
         fmts = [
             ('u1s2p3',         None, (1, -1)),
