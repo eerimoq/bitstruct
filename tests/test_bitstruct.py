@@ -57,13 +57,13 @@ class BitStructTest(unittest.TestCase):
         packed = pack('u5b2u1', 31, False, 1)
         self.assertEqual(packed, b'\xf9')
 
-        packed = pack('b1t24', False, u"Hi!")
+        packed = pack('b1t24', False, u'Hi!')
         self.assertEqual(packed, b'$4\x90\x80')
 
-        packed = pack('b1t24', False, "Hi!")
+        packed = pack('b1t24', False, 'Hi!')
         self.assertEqual(packed, b'$4\x90\x80')
 
-        packed = pack('t8000', 1000 * "7")
+        packed = pack('t8000', 1000 * '7')
         self.assertEqual(packed, 1000 * b'\x37')
 
         # Too many values to pack.
@@ -75,14 +75,14 @@ class BitStructTest(unittest.TestCase):
 
         # Cannot convert argument to integer.
         with self.assertRaises(ValueError) as cm:
-            pack('u1', "foo")
+            pack('u1', 'foo')
 
         self.assertEqual(str(cm.exception),
                          "invalid literal for int() with base 10: 'foo'")
 
         # Cannot convert argument to float.
         with self.assertRaises(ValueError) as cm:
-            pack('f32', "foo")
+            pack('f32', 'foo')
 
         if sys.version_info[0] < 3:
             self.assertEqual(str(cm.exception),
@@ -96,7 +96,7 @@ class BitStructTest(unittest.TestCase):
             pack('r5', 1.0)
 
         self.assertEqual(str(cm.exception),
-                         "'float' object is not iterable")
+                         "object of type 'float' has no len()")
 
         # Cannot encode argument as utf-8.
         with self.assertRaises(AttributeError) as cm:
@@ -152,7 +152,7 @@ class BitStructTest(unittest.TestCase):
         unpacked = unpack('u1s6f32r43', packed)
         self.assertEqual(unpacked, (0, -2, 3.75, b'\x00\xff\x00\xff\x00\xe0'))
 
-        packed = [0x80]
+        packed = bytearray(b'\x80')
         unpacked = unpack('b1', packed)
         self.assertEqual(unpacked, (True, ))
 
@@ -170,9 +170,9 @@ class BitStructTest(unittest.TestCase):
 
         packed = b'$4\x90\x80'
         unpacked = unpack('b1t24', packed)
-        self.assertEqual(unpacked, (False, u"Hi!"))
+        self.assertEqual(unpacked, (False, u'Hi!'))
 
-        packed = 1000 * b"7"
+        packed = 1000 * b'7'
         unpacked = unpack('t8000', packed)
         self.assertEqual(packed, 1000 * b'\x37')
 

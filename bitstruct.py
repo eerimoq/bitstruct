@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "6.0.0"
+__version__ = "7.0.0"
 
 
 class Error(Exception):
@@ -122,17 +122,14 @@ class _Float(_Info):
 class _Raw(_Info):
 
     def pack(self, arg):
-        value = bytearray(arg)
-
-        if 8 * len(value) < self.size:
+        if 8 * len(arg) < self.size:
             raise Error(
                 '"r{}" requires at least {} bits (got {})'.format(
                     self.size,
                     self.size,
-                    8 * len(value)))
+                    8 * len(arg)))
 
-
-        return bin(int(b'01' + binascii.hexlify(value), 16))[3:self.size + 3]
+        return bin(int(b'01' + binascii.hexlify(arg), 16))[3:self.size + 3]
 
     def unpack(self, bits):
         rest = self.size % 8
@@ -163,9 +160,7 @@ class _OnePadding(_Padding):
 class _Text(_Info):
 
     def pack(self, arg):
-        value = arg.encode('utf-8')
-
-        return _pack_bytearray(self.size, bytearray(value))
+        return _pack_bytearray(self.size, arg.encode('utf-8'))
 
     def unpack(self, bits):
         return _unpack_bytearray(self.size, bits).decode('utf-8')
@@ -294,7 +289,7 @@ class _CompiledFormat(object):
         return bytes(_unpack_bytearray(len(bits), bits))
 
     def unpack_from_any(self, data, offset):
-        bits = bin(int(b'01' + binascii.hexlify(bytearray(data)), 16))[3 + offset:]
+        bits = bin(int(b'01' + binascii.hexlify(data), 16))[3 + offset:]
 
         # Sanity check.
         if self._number_of_bits_to_unpack > len(bits):
@@ -465,7 +460,7 @@ class CompiledFormatDict(_CompiledFormat):
 
 
 def pack(fmt, *args):
-    """Return a byte string containing the values v1, v2, ... packed
+    """Return a bytes object containing the values v1, v2, ... packed
     according to given format string `fmt`. If the total number of
     bits are not a multiple of 8, padding will be added at the end of
     the last byte.
@@ -517,9 +512,8 @@ def pack(fmt, *args):
 
 
 def unpack(fmt, data):
-    """Unpack `data` (byte string, bytearray or list of integers)
-    according to given format string `fmt`. The result is a tuple even
-    if it contains exactly one item.
+    """Unpack `data` (bytes or bytearray) according to given format string
+    `fmt`. The result is a tuple even if it contains exactly one item.
 
     """
 
@@ -527,10 +521,10 @@ def unpack(fmt, data):
 
 
 def pack_into(fmt, buf, offset, *args, **kwargs):
-    """Pack given values v1, v2, ... into `buf`, starting at given bit
-    offset `offset`. Pack according to given format string `fmt`. Give
-    `fill_padding` as ``False`` to leave padding bits in `buf`
-    unmodified.
+    """Pack given values v1, v2, ... into given bytearray `buf`, starting
+    at given bit offset `offset`. Pack according to given format
+    string `fmt`. Give `fill_padding` as ``False`` to leave padding
+    bits in `buf` unmodified.
 
     """
 
@@ -541,10 +535,9 @@ def pack_into(fmt, buf, offset, *args, **kwargs):
 
 
 def unpack_from(fmt, data, offset=0):
-    """Unpack `data` (byte string, bytearray or list of integers)
-    according to given format string `fmt`, starting at given bit
-    offset `offset`. The result is a tuple even if it contains exactly
-    one item.
+    """Unpack `data` (bytes or bytearray) according to given format string
+    `fmt`, starting at given bit offset `offset`. The result is a
+    tuple even if it contains exactly one item.
 
     """
 
@@ -619,8 +612,8 @@ def byteswap(fmt, data, offset=0):
     """Swap bytes in `data` according to `fmt`, starting at byte `offset`
     and return the result. `fmt` must be an iterable, iterating over
     number of bytes to swap. For example, the format string ``'24'``
-    applied to the byte string ``b'\\x00\\x11\\x22\\x33\\x44\\x55'``
-    will produce the result ``b'\\x11\\x00\\x55\\x44\\x33\\x22'``.
+    applied to the bytes ``b'\\x00\\x11\\x22\\x33\\x44\\x55'`` will
+    produce the result ``b'\\x11\\x00\\x55\\x44\\x33\\x22'``.
 
     """
 
