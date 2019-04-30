@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "7.0.0"
+__version__ = "7.1.0"
 
 
 class Error(Exception):
@@ -190,6 +190,9 @@ def _parse_format(fmt, names):
 
         type_ = parsed_info[1]
         size = int(parsed_info[2])
+
+        if size == 0:
+            raise Error("bad format '{}'".format(fmt + byte_order))
 
         if names is None:
             name = i

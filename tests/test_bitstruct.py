@@ -511,7 +511,8 @@ class BitStructTest(unittest.TestCase):
             ('ss1', "bad format 'ss1'"),
             ('1s', "bad format '1s'"),
             ('foo', "bad format 'foo'"),
-            ('s>1>', "bad format 's>1>'")
+            ('s>1>', "bad format 's>1>'"),
+            ('s0', "bad format 's0'")
         ]
 
         for fmt, expected_error in formats:
