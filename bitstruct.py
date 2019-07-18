@@ -6,7 +6,7 @@ from io import BytesIO
 import binascii
 
 
-__version__ = "7.1.0"
+__version__ = '8.0.0'
 
 
 class Error(Exception):
@@ -122,12 +122,8 @@ class _Float(_Info):
 class _Raw(_Info):
 
     def pack(self, arg):
-        if 8 * len(arg) < self.size:
-            raise Error(
-                '"r{}" requires at least {} bits (got {})'.format(
-                    self.size,
-                    self.size,
-                    8 * len(arg)))
+        number_of_padding_bytes = ((self.size - 8 * len(arg)) // 8)
+        arg += (number_of_padding_bytes * b'\x00')
 
         return bin(int(b'01' + binascii.hexlify(arg), 16))[3:self.size + 3]
 
@@ -160,7 +156,11 @@ class _OnePadding(_Padding):
 class _Text(_Info):
 
     def pack(self, arg):
-        return _pack_bytearray(self.size, arg.encode('utf-8'))
+        encoded = arg.encode('utf-8')
+        number_of_padding_bytes = ((self.size - 8 * len(encoded)) // 8)
+        encoded += (number_of_padding_bytes * b'\x00')
+
+        return _pack_bytearray(self.size, encoded)
 
     def unpack(self, bits):
         return _unpack_bytearray(self.size, bits).decode('utf-8')
@@ -260,7 +260,7 @@ class _CompiledFormat(object):
             value_bits = value_bits[::-1]
 
         # Reverse bytes order for least significant byte first.
-        if self._byte_order == ">":
+        if self._byte_order == ">" or isinstance(info, (_Raw, _Text)):
             bits += value_bits
         else:
             aligned_offset = len(value_bits) - (8 - (len(bits) % 8))
@@ -309,7 +309,7 @@ class _CompiledFormat(object):
             else:
                 # Reverse bytes order for least significant byte
                 # first.
-                if self._byte_order == ">":
+                if self._byte_order == ">" or isinstance(info, (_Raw, _Text)):
                     value_bits = bits[offset:offset + info.size]
                 else:
                     value_bits_tmp = bits[offset:offset + info.size]
@@ -468,19 +468,19 @@ def pack(fmt, *args):
     bits are not a multiple of 8, padding will be added at the end of
     the last byte.
 
-    `fmt` is a string of bitorder-type-length groups, and optionally a
-    byteorder identifier after the groups. Bitorder and byteorder may
-    be omitted.
+    `fmt` is a string of bit order-type-length groups, and optionally
+    a byte order identifier after the groups. Bit Order and byte order
+    may be omitted.
 
-    Bitorder is either ``>`` or ``<``, where ``>`` means MSB first and
-    ``<`` means LSB first. If bitorder is omitted, the previous
-    values' bitorder is used for the current value. For example, in
+    Bit Order is either ``>`` or ``<``, where ``>`` means MSB first
+    and ``<`` means LSB first. If bit order is omitted, the previous
+    values' bit order is used for the current value. For example, in
     the format string ``'u1<u2u3'``, ``u1`` is MSB first and both
     ``u2`` and ``u3`` are LSB first.
 
-    Byteorder is either ``>`` or ``<``, where ``>`` means most
+    Byte Order is either ``>`` or ``<``, where ``>`` means most
     significant byte first and ``<`` means least significant byte
-    first. If byteorder is omitted, most significant byte first is
+    first. If byte order is omitted, most significant byte first is
     used.
 
     There are eight types; ``u``, ``s``, ``f``, ``b``, ``t``, ``r``,

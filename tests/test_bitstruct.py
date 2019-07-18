@@ -356,6 +356,13 @@ class BitStructTest(unittest.TestCase):
         unpacked = unpack('u19u5u1u7<', packed)
         self.assertEqual(unpacked, (0x12345, 5, 1, 2))
 
+        # Least significant byte first does not affect raw and text.
+        ref = b'123abc'
+        packed = pack('r24t24<', b'123', 'abc')
+        self.assertEqual(packed, ref)
+        unpacked = unpack('r24t24<', packed)
+        self.assertEqual(unpacked, (b'123', 'abc'))
+
     def test_performance_mixed_types(self):
         """Test pack/unpack performance with mixed types.
 
@@ -644,27 +651,51 @@ class BitStructTest(unittest.TestCase):
                         maximum,
                         number))
 
-    def test_pack_raw_values_checks(self):
-        """Pack raw values range checks.
+    def test_pack_unpack_raw(self):
+        """Pack and unpack raw values.
 
         """
 
-        # Formats with allowed size.
-        datas = [
-            (1, b''),
-            (9, b'\x00')
-        ]
+        packed = pack('r24', b'')
+        self.assertEqual(packed, b'\x00\x00\x00')
+        packed = pack('r24', b'12')
+        self.assertEqual(packed, b'12\x00')
+        packed = pack('r24', b'123')
+        self.assertEqual(packed, b'123')
+        packed = pack('r24', b'1234')
+        self.assertEqual(packed, b'123')
 
-        for size, data in datas:
-            with self.assertRaises(Error) as cm:
-                pack('r{}'.format(size), data)
+        unpacked = unpack('r24', b'\x00\x00\x00')[0]
+        self.assertEqual(unpacked, b'\x00\x00\x00')
+        unpacked = unpack('r24', b'12\x00')[0]
+        self.assertEqual(unpacked, b'12\x00')
+        unpacked = unpack('r24', b'123')[0]
+        self.assertEqual(unpacked, b'123')
+        unpacked = unpack('r24', b'1234')[0]
+        self.assertEqual(unpacked, b'123')
 
-                self.assertEqual(
-                    str(cm.exception),
-                    '"r{}" requires at least {} bits (got {})'.format(
-                        size,
-                        size,
-                        8 * len(data)))
+    def test_pack_unpack_text(self):
+        """Pack and unpack text values.
+
+        """
+
+        packed = pack('t24', '')
+        self.assertEqual(packed, b'\x00\x00\x00')
+        packed = pack('t24', '12')
+        self.assertEqual(packed, b'12\x00')
+        packed = pack('t24', '123')
+        self.assertEqual(packed, b'123')
+        packed = pack('t24', '1234')
+        self.assertEqual(packed, b'123')
+
+        unpacked = unpack('t24', b'\x00\x00\x00')[0]
+        self.assertEqual(unpacked, '\x00\x00\x00')
+        unpacked = unpack('t24', b'12\x00')[0]
+        self.assertEqual(unpacked, '12\x00')
+        unpacked = unpack('t24', b'123')[0]
+        self.assertEqual(unpacked, '123')
+        unpacked = unpack('t24', b'1234')[0]
+        self.assertEqual(unpacked, '123')
 
     def test_pack_unpack_dict(self):
         unpacked = {
