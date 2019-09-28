@@ -37,9 +37,9 @@ def setup(ext_modules):
 
 if sys.version_info[0] > 2:
     try:
-        setup([setuptools.Extension('bitstruct._c',
+        setup([setuptools.Extension('bitstruct.c',
                                     sources=[
-                                        'bitstruct/_c.c',
+                                        'bitstruct/c.c',
                                         'bitstruct/bitstream.c'
                                     ])])
     except:

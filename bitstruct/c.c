@@ -700,13 +700,13 @@ static struct PyMethodDef methods[] = {
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "bitstruct._cbitstruct",
+    .m_name = "bitstruct.c",
     .m_doc = "bitstruct C extension",
     .m_size = -1,
     .m_methods = methods
 };
 
-PyMODINIT_FUNC PyInit__c(void)
+PyMODINIT_FUNC PyInit_c(void)
 {
     PyObject *module_p;
 
