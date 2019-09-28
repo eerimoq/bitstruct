@@ -125,7 +125,7 @@ static int pack_float_32(struct bitstream_writer_t *self_p,
     float value;
     uint32_t data;
 
-    value = PyFloat_AsDouble(value_p);
+    value = (float)PyFloat_AsDouble(value_p);
     memcpy(&data, &value, sizeof(data));
     bitstream_writer_write_u32(self_p, data);
 
@@ -186,7 +186,7 @@ static int unpack_bool(struct bitstream_reader_t *self_p,
 {
     PyTuple_SET_ITEM(unpacked_p,
                      index,
-                     PyBool_FromLong(bitstream_reader_read_u64_bits(
+                     PyBool_FromLong((long)bitstream_reader_read_u64_bits(
                                          self_p,
                                          field_info_p->number_of_bits)));
 
