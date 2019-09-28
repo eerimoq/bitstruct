@@ -1,4 +1,5 @@
 |buildstatus|_
+|appveyor|_
 |coverage|_
 
 About
@@ -167,6 +168,9 @@ Contributing
 
 .. |buildstatus| image:: https://travis-ci.org/eerimoq/bitstruct.svg
 .. _buildstatus: https://travis-ci.org/eerimoq/bitstruct
+
+.. |appveyor| image:: https://img.shields.io/appveyor/ci/eerimoq/bitstruct/master.svg?label=AppVeyor
+.. _appveyor: https://ci.appveyor.com/project/eerimoq/bitstruct/history
 
 .. |coverage| image:: https://coveralls.io/repos/github/eerimoq/bitstruct/badge.svg?branch=master
 .. _coverage: https://coveralls.io/github/eerimoq/bitstruct
