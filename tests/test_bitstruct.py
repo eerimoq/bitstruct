@@ -1,7 +1,7 @@
 from __future__ import print_function
-import unittest
-import timeit
 import sys
+import timeit
+import unittest
 from bitstruct import *
 import bitstruct
 
@@ -65,6 +65,16 @@ class BitStructTest(unittest.TestCase):
 
         packed = pack('t8000', 1000 * '7')
         self.assertEqual(packed, 1000 * b'\x37')
+
+        if sys.version_info[0] > 2:
+            packed = pack('f16', 1.0)
+            self.assertEqual(packed, b'\x3c\x00')
+
+        packed = pack('f32', 1.0)
+        self.assertEqual(packed, b'\x3f\x80\x00\x00')
+
+        packed = pack('f64', 1.0)
+        self.assertEqual(packed, b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
 
         # Too many values to pack.
         with self.assertRaises(Error) as cm:
@@ -775,6 +785,30 @@ class BitStructTest(unittest.TestCase):
     def test_compile_formats(self):
         bitstruct.compile('p1u1')
         bitstruct.compile('p1u1', ['a'])
+
+    def test_pack_unpack_signed(self):
+        datas = [
+            ('s1', 0, b'\x00'),
+            ('s1', -1, b'\x80'),
+            ('s63', -1, b'\xff\xff\xff\xff\xff\xff\xff\xfe'),
+            ('s64', -1, b'\xff\xff\xff\xff\xff\xff\xff\xff')
+        ]
+
+        for fmt, value, packed in datas:
+            self.assertEqual(pack(fmt, value), packed)
+            self.assertEqual(unpack(fmt, packed), (value, ))
+
+    def test_pack_unpack_unsigned(self):
+        datas = [
+            ('u1', 0, b'\x00'),
+            ('u1', 1, b'\x80'),
+            ('u63', 0x1234567890abcdef, b'$h\xac\xf1!W\x9b\xde'),
+            ('u64', 0x1234567890abcdef, b'\x124Vx\x90\xab\xcd\xef')
+        ]
+
+        for fmt, value, packed in datas:
+            self.assertEqual(pack(fmt, value), packed)
+            self.assertEqual(unpack(fmt, packed), (value, ))
 
 
 if __name__ == '__main__':

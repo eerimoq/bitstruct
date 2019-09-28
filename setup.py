@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-from setuptools import setup
-from setuptools import find_packages
+import sys
 import re
+import setuptools
+from setuptools import find_packages
 
 
 def find_version():
@@ -11,21 +12,39 @@ def find_version():
                      re.MULTILINE).group(1)
 
 
-setup(name='bitstruct',
-      version=find_version(),
-      description=('This module performs conversions between Python values '
-                   'and C bit field structs represented as Python '
-                   'byte strings.'),
-      long_description=open('README.rst', 'r').read(),
-      author='Erik Moqvist, Ilya Petukhov',
-      author_email='erik.moqvist@gmail.com',
-      license='MIT',
-      classifiers=[
-          'License :: OSI Approved :: MIT License',
-          'Programming Language :: Python :: 2',
-          'Programming Language :: Python :: 3',
-      ],
-      keywords=['bit field', 'bit parsing', 'bit unpack', 'bit pack'],
-      url='https://github.com/eerimoq/bitstruct',
-      packages=find_packages(exclude=['tests']),
-      test_suite="tests")
+def setup(ext_modules):
+    setuptools.setup(
+        name='bitstruct',
+        version=find_version(),
+        description=('This module performs conversions between Python values '
+                     'and C bit field structs represented as Python '
+                     'byte strings.'),
+        long_description=open('README.rst', 'r').read(),
+        author='Erik Moqvist, Ilya Petukhov',
+        author_email='erik.moqvist@gmail.com',
+        license='MIT',
+        classifiers=[
+            'License :: OSI Approved :: MIT License',
+            'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 3',
+        ],
+        keywords=['bit field', 'bit parsing', 'bit unpack', 'bit pack'],
+        url='https://github.com/eerimoq/bitstruct',
+        packages=find_packages(exclude=['tests']),
+        ext_modules=ext_modules,
+        test_suite="tests")
+
+
+if sys.version_info[0] > 2:
+    try:
+        setup([setuptools.Extension('bitstruct._c',
+                                    sources=[
+                                        'bitstruct/_c.c',
+                                        'bitstruct/bitstream.c'
+                                    ])])
+    except:
+        print('WARNING: Failed to build the C extension.')
+        setup([])
+else:
+    print('INFO: C extension not implemented in Python 2.')
+    setup([])
