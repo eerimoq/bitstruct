@@ -21,6 +21,32 @@ Installation
 
     pip install bitstruct
 
+Performance
+===========
+
+Parts of this package has been re-implemented in C for faster pack and
+unpack operations. There are two independent C implementations;
+``bitstruct.c``, which is part of this package, and the standalone
+package `cbitstruct`_. These implementations are only available in
+Python 3, and must be explicitly imported. By default the pure Python
+implementation is used.
+
+To use ``bitstruct.c``, do ``import bitstruct.c as bitstruct``.
+
+To use ``cbitstruct``, do ``import cbitstruct as bitstruct``.
+
+``bitstruct.c`` has a few limitations compared to the pure Python
+implementation:
+
+- Only ``pack()`` and ``unpack()`` are implemented.
+
+- Integers and booleans must be 64 bits or less.
+
+- Text and raw must be a multiple of 8 bits.
+
+- Bit endianness and byte order are not supported.
+
+See `cbitstruct`_ for its limitations.
 
 Example usage
 =============
@@ -142,6 +168,17 @@ values:
     >>> unpack('u1u3u4s16', byteswap('12', packed))
     (1, 2, 3, 256)
 
+A basic example of `packing`_ and `unpacking`_ four integers using the
+format string ``'u1u3u4s16'`` using the C implementation:
+
+.. code-block:: python
+
+    >>> from bitstruct.c import *
+    >>> pack('u1u3u4s16', 1, 2, 3, -4)
+    b'\xa3\xff\xfc'
+    >>> unpack('u1u3u4s16', b'\xa3\xff\xfc')
+    (1, 2, 3, -4)
+
 Contributing
 ============
 
@@ -194,3 +231,5 @@ Contributing
 .. _byteswap: http://bitstruct.readthedocs.io/en/latest/#bitstruct.byteswap
 
 .. _compiling: http://bitstruct.readthedocs.io/en/latest/#bitstruct.compile
+
+.. _cbitstruct: https://github.com/qchateau/cbitstruct
