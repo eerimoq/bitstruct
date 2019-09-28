@@ -1,10 +1,18 @@
 #!/usr/bin/env python
 
 from setuptools import setup
-import bitstruct
+from setuptools import find_packages
+import re
+
+
+def find_version():
+    return re.search(r"^__version__ = '(.*)'$",
+                     open('bitstruct/version.py', 'r').read(),
+                     re.MULTILINE).group(1)
+
 
 setup(name='bitstruct',
-      version=bitstruct.__version__,
+      version=find_version(),
       description=('This module performs conversions between Python values '
                    'and C bit field structs represented as Python '
                    'byte strings.'),
@@ -19,5 +27,5 @@ setup(name='bitstruct',
       ],
       keywords=['bit field', 'bit parsing', 'bit unpack', 'bit pack'],
       url='https://github.com/eerimoq/bitstruct',
-      py_modules=['bitstruct'],
+      packages=find_packages(exclude=['tests']),
       test_suite="tests")

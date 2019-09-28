@@ -5,8 +5,7 @@ import struct
 from io import BytesIO
 import binascii
 
-
-__version__ = '8.0.0'
+from .version import __version__
 
 
 class Error(Exception):
