@@ -26,16 +26,16 @@ Performance
 
 Parts of this package has been re-implemented in C for faster pack and
 unpack operations. There are two independent C implementations;
-``bitstruct.c``, which is part of this package, and the standalone
+`bitstruct.c`, which is part of this package, and the standalone
 package `cbitstruct`_. These implementations are only available in
 Python 3, and must be explicitly imported. By default the pure Python
 implementation is used.
 
-To use ``bitstruct.c``, do ``import bitstruct.c as bitstruct``.
+To use `bitstruct.c`, do ``import bitstruct.c as bitstruct``.
 
-To use ``cbitstruct``, do ``import cbitstruct as bitstruct``.
+To use `cbitstruct`_, do ``import cbitstruct as bitstruct``.
 
-``bitstruct.c`` has a few limitations compared to the pure Python
+`bitstruct.c` has a few limitations compared to the pure Python
 implementation:
 
 - Only ``pack()`` and ``unpack()`` are implemented.
