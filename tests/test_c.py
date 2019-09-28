@@ -166,6 +166,15 @@ class CTest(unittest.TestCase):
         unpacked = unpack('t8000', packed)
         self.assertEqual(packed, 1000 * b'\x37')
 
+        unpacked = unpack('f16', b'\x3c\x00')
+        self.assertEqual(unpacked, (1.0, ))
+
+        packed = unpack('f32', b'\x3f\x80\x00\x00')
+        self.assertEqual(unpacked, (1.0, ))
+
+        packed = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
+        self.assertEqual(unpacked, (1.0, ))
+
     def test_pack_unpack_raw(self):
         """Pack and unpack raw values.
 
@@ -269,6 +278,13 @@ class CTest(unittest.TestCase):
         for fmt, value, packed in datas:
             self.assertEqual(pack(fmt, value), packed)
             self.assertEqual(unpack(fmt, packed), (value, ))
+
+    def test_various(self):
+        if sys.version_info[0] < 3:
+            return
+
+        with self.assertRaises(ValueError):
+            pack('u89999888888888888888899', 1)
 
 
 if __name__ == '__main__':

@@ -113,7 +113,12 @@ static int unpack_float_16(struct bitstream_reader_t *self_p,
                            int index,
                            struct field_info_t *field_info_p)
 {
-    PyErr_SetString(PyExc_NotImplementedError, "");
+    uint8_t buf[2];
+    double value;
+
+    bitstream_reader_read_bytes(self_p, &buf[0], sizeof(buf));
+    value = _PyFloat_Unpack2(&buf[0], PY_BIG_ENDIAN);
+    PyTuple_SET_ITEM(unpacked_p, index, PyFloat_FromDouble(value));
 
     return (1);
 }
@@ -137,7 +142,9 @@ static int unpack_float_32(struct bitstream_reader_t *self_p,
                            int index,
                            struct field_info_t *field_info_p)
 {
-    PyErr_SetString(PyExc_NotImplementedError, "");
+    PyTuple_SET_ITEM(unpacked_p,
+                     index,
+                     PyFloat_FromDouble(bitstream_reader_read_u32(self_p)));
 
     return (1);
 }
@@ -163,7 +170,9 @@ static int unpack_float_64(struct bitstream_reader_t *self_p,
                            int index,
                            struct field_info_t *field_info_p)
 {
-    PyErr_SetString(PyExc_NotImplementedError, "");
+    PyTuple_SET_ITEM(unpacked_p,
+                     index,
+                     PyFloat_FromDouble(bitstream_reader_read_u64(self_p)));
 
     return (1);
 }
@@ -514,16 +523,23 @@ const char *parse_field(const char *format_p,
                         int *kind_p,
                         int *number_of_bits_p)
 {
-    *kind_p = *format_p;
-    *number_of_bits_p = 0;
-
     if (*format_p == '\0') {
-        return (format_p);
+        PyErr_SetString(PyExc_ValueError, "Bad format.");
+
+        return (NULL);
     }
 
+    *kind_p = *format_p;
+    *number_of_bits_p = 0;
     format_p++;
 
     while (isdigit(*format_p)) {
+        if (*number_of_bits_p > (INT_MAX / 100)) {
+            PyErr_SetString(PyExc_ValueError, "Field too long.");
+
+            return (NULL);
+        }
+
         *number_of_bits_p *= 10;
         *number_of_bits_p += (*format_p - '0');
         format_p++;
@@ -561,6 +577,13 @@ static struct info_t *parse_format(PyObject *format_obj_p)
 
     for (i = 0; i < info_p->number_of_fields; i++) {
         format_p = parse_field(format_p, &kind, &number_of_bits);
+
+        if (format_p == NULL) {
+            PyMem_RawFree(info_p);
+
+            return (NULL);
+        }
+
         res = field_info_init(&info_p->fields[i], kind, number_of_bits);
 
         if (res != 0) {
