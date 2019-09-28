@@ -3,7 +3,6 @@
  */
 
 #include <Python.h>
-#include <dbg.h>
 #include "bitstream.h"
 
 struct field_info_t;
