@@ -816,8 +816,6 @@ static PyObject *unpack_dict(struct info_t *info_p,
     int res;
     int produced_args;
 
-    unpacked_p = NULL;
-
     if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
 
