@@ -500,12 +500,6 @@ const char *parse_field(const char *format_p,
                         int *kind_p,
                         int *number_of_bits_p)
 {
-    if (*format_p == '\0') {
-        PyErr_SetString(PyExc_ValueError, "Bad format.");
-
-        return (NULL);
-    }
-
     *kind_p = *format_p;
     *number_of_bits_p = 0;
     format_p++;
