@@ -206,6 +206,9 @@ class CTest(unittest.TestCase):
         self.assertEqual(unpacked, b'123')
 
     def test_pack_unpack_dict(self):
+        if sys.version_info[0] < 3:
+            return
+
         unpacked = {
             'foo': 0,
             'bar': 0,
