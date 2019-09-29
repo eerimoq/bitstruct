@@ -77,8 +77,9 @@ class CTest(unittest.TestCase):
         packed = pack('t8000', 1000 * '7')
         self.assertEqual(packed, 1000 * b'\x37')
 
-        packed = pack('f16', 1.0)
-        self.assertEqual(packed, b'\x3c\x00')
+        if sys.version_info >= (3, 6):
+            packed = pack('f16', 1.0)
+            self.assertEqual(packed, b'\x3c\x00')
 
         packed = pack('f32', 1.0)
         self.assertEqual(packed, b'\x3f\x80\x00\x00')
@@ -166,13 +167,14 @@ class CTest(unittest.TestCase):
         unpacked = unpack('t8000', packed)
         self.assertEqual(packed, 1000 * b'\x37')
 
-        unpacked = unpack('f16', b'\x3c\x00')
+        if sys.version_info >= (3, 6):
+            unpacked = unpack('f16', b'\x3c\x00')
+            self.assertEqual(unpacked, (1.0, ))
+
+        unpacked = unpack('f32', b'\x3f\x80\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
 
-        packed = unpack('f32', b'\x3f\x80\x00\x00')
-        self.assertEqual(unpacked, (1.0, ))
-
-        packed = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
+        unpacked = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
 
     def test_pack_unpack_raw(self):

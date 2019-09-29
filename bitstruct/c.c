@@ -125,7 +125,13 @@ static void pack_float_32(struct bitstream_writer_t *self_p,
 static PyObject *unpack_float_32(struct bitstream_reader_t *self_p,
                                  struct field_info_t *field_info_p)
 {
-    return (PyFloat_FromDouble(bitstream_reader_read_u32(self_p)));
+    float value;
+    uint32_t data;
+
+    data = bitstream_reader_read_u32(self_p);
+    memcpy(&value, &data, sizeof(value));
+
+    return (PyFloat_FromDouble(value));
 }
 
 static void pack_float_64(struct bitstream_writer_t *self_p,
@@ -145,7 +151,13 @@ static void pack_float_64(struct bitstream_writer_t *self_p,
 static PyObject *unpack_float_64(struct bitstream_reader_t *self_p,
                                  struct field_info_t *field_info_p)
 {
-    return (PyFloat_FromDouble(bitstream_reader_read_u64(self_p)));
+    double value;
+    uint64_t data;
+
+    data = bitstream_reader_read_u64(self_p);
+    memcpy(&value, &data, sizeof(value));
+
+    return (PyFloat_FromDouble(value));
 }
 
 static void pack_bool(struct bitstream_writer_t *self_p,
