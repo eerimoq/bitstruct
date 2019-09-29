@@ -13,7 +13,6 @@ Project homepage: https://github.com/eerimoq/bitstruct
 
 Documentation: http://bitstruct.readthedocs.org/en/latest
 
-
 Installation
 ============
 
@@ -45,6 +44,8 @@ implementation:
 - Text and raw must be a multiple of 8 bits.
 
 - Bit endianness and byte order are not supported.
+
+- No range checks for integers less than 64 bits.
 
 See `cbitstruct`_ for its limitations.
 

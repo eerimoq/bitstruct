@@ -322,8 +322,8 @@ void bitstream_writer_insert_u64_bits(struct bitstream_writer_t *self_p,
 void bitstream_writer_seek(struct bitstream_writer_t *self_p,
                            int offset)
 {
-    offset += self_p->bit_offset;
-    self_p->byte_offset += (offset / 8);
+    offset += ((8 * self_p->byte_offset) + self_p->bit_offset);
+    self_p->byte_offset = (offset / 8);
     self_p->bit_offset = (offset % 8);
 }
 
@@ -559,7 +559,7 @@ uint64_t bitstream_reader_read_u64_bits(struct bitstream_reader_t *self_p,
 void bitstream_reader_seek(struct bitstream_reader_t *self_p,
                            int offset)
 {
-    offset += self_p->bit_offset;
-    self_p->byte_offset += (offset / 8);
+    offset += ((8 * self_p->byte_offset) + self_p->bit_offset);
+    self_p->byte_offset = (offset / 8);
     self_p->bit_offset = (offset % 8);
 }

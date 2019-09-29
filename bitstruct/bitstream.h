@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-#define BITSTREAM_VERSION "0.2.0"
+#define BITSTREAM_VERSION "0.2.1"
 
 struct bitstream_writer_t {
     uint8_t *buf_p;
@@ -119,8 +119,9 @@ void bitstream_writer_insert_u64_bits(struct bitstream_writer_t *self_p,
                                       uint64_t value,
                                       int number_of_bits);
 
-/* Move write position. Use write with care after seek, as seek does
-   not clear bytes. */
+/* Move write position. Seeking backwards makes the written size
+   smaller. Use write with care after seek, as seek does not clear
+   bytes. */
 void bitstream_writer_seek(struct bitstream_writer_t *self_p,
                            int offset);
 
