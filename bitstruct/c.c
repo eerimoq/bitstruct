@@ -1017,7 +1017,6 @@ static PyObject *m_compile(PyObject *module_p,
 {
     PyObject *format_p;
     PyObject *names_p;
-    PyObject *compiled_format_p;
     int res;
     static char *keywords[] = {
         "fmt",
@@ -1038,20 +1037,12 @@ static PyObject *m_compile(PyObject *module_p,
     }
 
     if (names_p == Py_None) {
-        compiled_format_p = compiled_format_new(&compiled_format_type,
-                                                format_p);
+        return (compiled_format_new(&compiled_format_type, format_p));
     } else {
-        compiled_format_p = compiled_format_dict_new(&compiled_format_dict_type,
-                                                     format_p,
-                                                     names_p);
+        return (compiled_format_dict_new(&compiled_format_dict_type,
+                                         format_p,
+                                         names_p));
     }
-
-    if ((compiled_format_p != NULL) && (PyErr_Occurred() != NULL)) {
-        Py_DECREF(compiled_format_p);
-        compiled_format_p = NULL;
-    }
-
-    return (compiled_format_p);
 }
 
 static struct PyMethodDef methods[] = {
