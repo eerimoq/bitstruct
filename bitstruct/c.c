@@ -641,7 +641,7 @@ static PyObject *m_pack(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
-    packed_p = pack(info_p, args_p, 1, number_of_args);
+    packed_p = pack(info_p, args_p, 1, number_of_args - 1);
     PyMem_RawFree(info_p);
 
     return (packed_p);

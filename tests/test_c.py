@@ -373,6 +373,69 @@ class CTest(unittest.TestCase):
         self.assertEqual(pack('u1p1', 1), b'\x80')
         self.assertEqual(pack_dict('u1p1', ['foo'], {'foo': 1}), b'\x80')
 
+        # Short text.
+        with self.assertRaises(NotImplementedError) as cm:
+            pack('t16', '1')
+
+        self.assertEqual(str(cm.exception), 'Short text.')
+
+        # Bad float length.
+        with self.assertRaises(NotImplementedError) as cm:
+            pack('f1', 1.0)
+
+        if sys.version_info >= (3, 6):
+            self.assertEqual(str(cm.exception), 'Float not 16, 32 or 64 bits.')
+        else:
+            self.assertEqual(str(cm.exception), 'Float not 32 or 64 bits.')
+
+        # Long bool.
+        with self.assertRaises(NotImplementedError) as cm:
+            pack('b65', True)
+
+        self.assertEqual(str(cm.exception), 'Bool over 64 bits.')
+
+        # Text not multiple of 8 bits.
+        with self.assertRaises(NotImplementedError) as cm:
+            pack('t1', '')
+
+        self.assertEqual(str(cm.exception), 'Text not multiple of 8 bits.')
+
+        # Bad format kind.
+        with self.assertRaises(ValueError) as cm:
+            pack('x1', '')
+
+        self.assertEqual(str(cm.exception), "Bad format field type 'x'.")
+
+        # Too few arguments.
+        with self.assertRaises(ValueError) as cm:
+            pack('u1u1', 1)
+
+        self.assertEqual(str(cm.exception), 'Too few arguments.')
+
+        # No format string.
+        with self.assertRaises(ValueError) as cm:
+            pack()
+
+        self.assertEqual(str(cm.exception), 'No format string.')
+
+        # No format string.
+        with self.assertRaises(ValueError) as cm:
+            unpack('u1', b'')
+
+        self.assertEqual(str(cm.exception), 'Short data.')
+
+        # Bad format in compile.
+        with self.assertRaises(ValueError) as cm:
+            bitstruct.c.compile('x1')
+
+        self.assertEqual(str(cm.exception), "Bad format field type 'x'.")
+
+        # Bad format in compile dict.
+        with self.assertRaises(ValueError) as cm:
+            bitstruct.c.compile('x1', ['foo'])
+
+        self.assertEqual(str(cm.exception), "Bad format field type 'x'.")
+
 
 if __name__ == '__main__':
     unittest.main()
