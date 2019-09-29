@@ -1,2 +1,2 @@
 ignore:
-  - "bitstruct/bitstream.h"
+  - "bitstruct/bitstream.c"
