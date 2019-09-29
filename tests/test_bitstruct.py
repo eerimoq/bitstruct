@@ -66,7 +66,7 @@ class BitStructTest(unittest.TestCase):
         packed = pack('t8000', 1000 * '7')
         self.assertEqual(packed, 1000 * b'\x37')
 
-        if sys.version_info[0] > 2:
+        if sys.version_info >= (3, 6):
             packed = pack('f16', 1.0)
             self.assertEqual(packed, b'\x3c\x00')
 
