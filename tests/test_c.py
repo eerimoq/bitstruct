@@ -306,6 +306,16 @@ class CTest(unittest.TestCase):
             self.assertEqual(packed_1, b'\xe0')
             self.assertEqual(packed_2, b'\xe0')
 
+            if names is None:
+                unpacked_1 = cf.unpack(packed_1)
+                unpacked_2 = unpack(fmt, packed_2)
+            else:
+                unpacked_1 = cf.unpack(packed_1)
+                unpacked_2 = unpack_dict(fmt, names, packed_2)
+
+            self.assertEqual(unpacked_1, decoded)
+            self.assertEqual(unpacked_2, decoded)
+
     def test_compile_formats(self):
         if sys.version_info[0] < 3:
             return
