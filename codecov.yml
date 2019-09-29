@@ -1,0 +1,2 @@
+ignore:
+  - "bitstruct/bitstream.h"
