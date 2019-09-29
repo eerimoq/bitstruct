@@ -205,6 +205,21 @@ class CTest(unittest.TestCase):
         unpacked = unpack('r24', b'1234')[0]
         self.assertEqual(unpacked, b'123')
 
+    def test_pack_unpack_dict(self):
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        packed = b'\x3e\x82\x16'
+        fmt = 'u1u1s6u7u9'
+        names = ['foo', 'bar', 'fie', 'fum', 'fam']
+
+        self.assertEqual(pack_dict(fmt, names, unpacked), packed)
+        self.assertEqual(unpack_dict(fmt, names, packed), unpacked)
+
     def test_performance_mixed_types(self):
         """Test pack/unpack performance with mixed types.
 
@@ -285,6 +300,26 @@ class CTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             pack('u89999888888888888888899', 1)
+
+        # Fewer names than fields in the format.
+        with self.assertRaises(ValueError):
+            pack_dict('u1u1', ['foo'], {'foo': 1})
+
+        # Missing value for name.
+        with self.assertRaises(KeyError):
+            pack_dict('u1', ['foo'], {})
+
+        # Fewer names than fields in the format.
+        with self.assertRaises(ValueError):
+            unpack_dict('u1u1', ['foo'], b'\xff')
+
+        # Short data.
+        with self.assertRaises(ValueError):
+            unpack_dict('u1', ['foo'], b'')
+
+        # Padding last.
+        self.assertEqual(pack('u1p1', 1), b'\x80')
+        self.assertEqual(pack_dict('u1p1', ['foo'], {'foo': 1}), b'\x80')
 
 
 if __name__ == '__main__':

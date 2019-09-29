@@ -3,24 +3,24 @@
  */
 
 #include <Python.h>
+#include <stdbool.h>
+#include <dbg.h>
 #include "bitstream.h"
 
 struct field_info_t;
 
-typedef int (*pack_field_t)(struct bitstream_writer_t *self_p,
-                            PyObject *value_p,
-                            struct field_info_t *field_info_p);
+typedef void (*pack_field_t)(struct bitstream_writer_t *self_p,
+                             PyObject *value_p,
+                             struct field_info_t *field_info_p);
 
-typedef int (*unpack_field_t)(struct bitstream_reader_t *self_p,
-                              PyObject *unpacked_p,
-                              int index,
-                              struct field_info_t *field_info_p);
+typedef PyObject *(*unpack_field_t)(struct bitstream_reader_t *self_p,
+                                    struct field_info_t *field_info_p);
 
 struct field_info_t {
     pack_field_t pack;
     unpack_field_t unpack;
-    int kind;
     int number_of_bits;
+    bool is_padding;
 };
 
 struct info_t {
@@ -30,9 +30,9 @@ struct info_t {
     struct field_info_t fields[1];
 };
 
-static int pack_signed_integer(struct bitstream_writer_t *self_p,
-                               PyObject *value_p,
-                               struct field_info_t *field_info_p)
+static void pack_signed_integer(struct bitstream_writer_t *self_p,
+                                PyObject *value_p,
+                                struct field_info_t *field_info_p)
 {
     uint64_t value;
 
@@ -45,14 +45,10 @@ static int pack_signed_integer(struct bitstream_writer_t *self_p,
     bitstream_writer_write_u64_bits(self_p,
                                     value,
                                     field_info_p->number_of_bits);
-
-    return (1);
 }
 
-static int unpack_signed_integer(struct bitstream_reader_t *self_p,
-                                 PyObject *unpacked_p,
-                                 int index,
-                                 struct field_info_t *field_info_p)
+static PyObject *unpack_signed_integer(struct bitstream_reader_t *self_p,
+                                       struct field_info_t *field_info_p)
 {
     uint64_t value;
     uint64_t sign_bit;
@@ -64,39 +60,32 @@ static int unpack_signed_integer(struct bitstream_reader_t *self_p,
         value |= ~(((sign_bit) << 1) - 1);
     }
 
-    PyTuple_SET_ITEM(unpacked_p, index, PyLong_FromLongLong(value));
-
-    return (1);
+    return (PyLong_FromLongLong(value));
 }
 
-static int pack_unsigned_integer(struct bitstream_writer_t *self_p,
-                                 PyObject *value_p,
-                                 struct field_info_t *field_info_p)
+static void pack_unsigned_integer(struct bitstream_writer_t *self_p,
+                                  PyObject *value_p,
+                                  struct field_info_t *field_info_p)
 {
     bitstream_writer_write_u64_bits(self_p,
                                     PyLong_AsUnsignedLongLong(value_p),
                                     field_info_p->number_of_bits);
-
-    return (1);
 }
 
-static int unpack_unsigned_integer(struct bitstream_reader_t *self_p,
-                                   PyObject *unpacked_p,
-                                   int index,
-                                   struct field_info_t *field_info_p)
+static PyObject *unpack_unsigned_integer(struct bitstream_reader_t *self_p,
+                                         struct field_info_t *field_info_p)
 {
     uint64_t value;
 
     value = bitstream_reader_read_u64_bits(self_p,
                                            field_info_p->number_of_bits);
-    PyTuple_SET_ITEM(unpacked_p, index, PyLong_FromUnsignedLongLong(value));
 
-    return (1);
+    return (PyLong_FromUnsignedLongLong(value));
 }
 
-static int pack_float_16(struct bitstream_writer_t *self_p,
-                         PyObject *value_p,
-                         struct field_info_t *field_info_p)
+static void pack_float_16(struct bitstream_writer_t *self_p,
+                          PyObject *value_p,
+                          struct field_info_t *field_info_p)
 {
     uint8_t buf[2];
 
@@ -104,28 +93,23 @@ static int pack_float_16(struct bitstream_writer_t *self_p,
                    &buf[0],
                    PY_BIG_ENDIAN);
     bitstream_writer_write_bytes(self_p, &buf[0], sizeof(buf));
-
-    return (1);
 }
 
-static int unpack_float_16(struct bitstream_reader_t *self_p,
-                           PyObject *unpacked_p,
-                           int index,
-                           struct field_info_t *field_info_p)
+static PyObject *unpack_float_16(struct bitstream_reader_t *self_p,
+                                 struct field_info_t *field_info_p)
 {
     uint8_t buf[2];
     double value;
 
     bitstream_reader_read_bytes(self_p, &buf[0], sizeof(buf));
     value = _PyFloat_Unpack2(&buf[0], PY_BIG_ENDIAN);
-    PyTuple_SET_ITEM(unpacked_p, index, PyFloat_FromDouble(value));
 
-    return (1);
+    return (PyFloat_FromDouble(value));
 }
 
-static int pack_float_32(struct bitstream_writer_t *self_p,
-                         PyObject *value_p,
-                         struct field_info_t *field_info_p)
+static void pack_float_32(struct bitstream_writer_t *self_p,
+                          PyObject *value_p,
+                          struct field_info_t *field_info_p)
 {
     float value;
     uint32_t data;
@@ -133,25 +117,17 @@ static int pack_float_32(struct bitstream_writer_t *self_p,
     value = (float)PyFloat_AsDouble(value_p);
     memcpy(&data, &value, sizeof(data));
     bitstream_writer_write_u32(self_p, data);
-
-    return (1);
 }
 
-static int unpack_float_32(struct bitstream_reader_t *self_p,
-                           PyObject *unpacked_p,
-                           int index,
-                           struct field_info_t *field_info_p)
+static PyObject *unpack_float_32(struct bitstream_reader_t *self_p,
+                                 struct field_info_t *field_info_p)
 {
-    PyTuple_SET_ITEM(unpacked_p,
-                     index,
-                     PyFloat_FromDouble(bitstream_reader_read_u32(self_p)));
-
-    return (1);
+    return (PyFloat_FromDouble(bitstream_reader_read_u32(self_p)));
 }
 
-static int pack_float_64(struct bitstream_writer_t *self_p,
-                         PyObject *value_p,
-                         struct field_info_t *field_info_p)
+static void pack_float_64(struct bitstream_writer_t *self_p,
+                          PyObject *value_p,
+                          struct field_info_t *field_info_p)
 {
     double value;
     uint64_t data;
@@ -161,50 +137,34 @@ static int pack_float_64(struct bitstream_writer_t *self_p,
     bitstream_writer_write_u64_bits(self_p,
                                     data,
                                     field_info_p->number_of_bits);
-
-    return (1);
 }
 
-static int unpack_float_64(struct bitstream_reader_t *self_p,
-                           PyObject *unpacked_p,
-                           int index,
-                           struct field_info_t *field_info_p)
+static PyObject *unpack_float_64(struct bitstream_reader_t *self_p,
+                                 struct field_info_t *field_info_p)
 {
-    PyTuple_SET_ITEM(unpacked_p,
-                     index,
-                     PyFloat_FromDouble(bitstream_reader_read_u64(self_p)));
-
-    return (1);
+    return (PyFloat_FromDouble(bitstream_reader_read_u64(self_p)));
 }
 
-static int pack_bool(struct bitstream_writer_t *self_p,
-                     PyObject *value_p,
-                     struct field_info_t *field_info_p)
+static void pack_bool(struct bitstream_writer_t *self_p,
+                      PyObject *value_p,
+                      struct field_info_t *field_info_p)
 {
     bitstream_writer_write_u64_bits(self_p,
                                     PyObject_IsTrue(value_p),
                                     field_info_p->number_of_bits);
-
-    return (1);
 }
 
-static int unpack_bool(struct bitstream_reader_t *self_p,
-                       PyObject *unpacked_p,
-                       int index,
-                       struct field_info_t *field_info_p)
+static PyObject *unpack_bool(struct bitstream_reader_t *self_p,
+                             struct field_info_t *field_info_p)
 {
-    PyTuple_SET_ITEM(unpacked_p,
-                     index,
-                     PyBool_FromLong((long)bitstream_reader_read_u64_bits(
-                                         self_p,
-                                         field_info_p->number_of_bits)));
-
-    return (1);
+    return (PyBool_FromLong((long)bitstream_reader_read_u64_bits(
+                                self_p,
+                                field_info_p->number_of_bits)));
 }
 
-static int pack_text(struct bitstream_writer_t *self_p,
-                     PyObject *value_p,
-                     struct field_info_t *field_info_p)
+static void pack_text(struct bitstream_writer_t *self_p,
+                      PyObject *value_p,
+                      struct field_info_t *field_info_p)
 {
     Py_ssize_t size;
     const char* buf_p;
@@ -220,14 +180,10 @@ static int pack_text(struct bitstream_writer_t *self_p,
                                          field_info_p->number_of_bits / 8);
         }
     }
-
-    return (1);
 }
 
-static int unpack_text(struct bitstream_reader_t *self_p,
-                       PyObject *unpacked_p,
-                       int index,
-                       struct field_info_t *field_info_p)
+static PyObject *unpack_text(struct bitstream_reader_t *self_p,
+                             struct field_info_t *field_info_p)
 {
     uint8_t *buf_p;
     PyObject *value_p;
@@ -237,24 +193,19 @@ static int unpack_text(struct bitstream_reader_t *self_p,
     buf_p = PyMem_RawMalloc(number_of_bytes);
 
     if (buf_p == NULL) {
-        return (1);
+        return (NULL);
     }
 
     bitstream_reader_read_bytes(self_p, buf_p, number_of_bytes);
     value_p = PyUnicode_FromStringAndSize((const char *)buf_p, number_of_bytes);
-
-    if (value_p != NULL) {
-        PyTuple_SET_ITEM(unpacked_p, index, value_p);
-    }
-
     PyMem_RawFree(buf_p);
 
-    return (1);
+    return (value_p);
 }
 
-static int pack_raw(struct bitstream_writer_t *self_p,
-                    PyObject *value_p,
-                    struct field_info_t *field_info_p)
+static void pack_raw(struct bitstream_writer_t *self_p,
+                     PyObject *value_p,
+                     struct field_info_t *field_info_p)
 {
     Py_ssize_t size;
     char* buf_p;
@@ -271,14 +222,10 @@ static int pack_raw(struct bitstream_writer_t *self_p,
                                          field_info_p->number_of_bits / 8);
         }
     }
-
-    return (1);
 }
 
-static int unpack_raw(struct bitstream_reader_t *self_p,
-                      PyObject *unpacked_p,
-                      int index,
-                      struct field_info_t *field_info_p)
+static PyObject *unpack_raw(struct bitstream_reader_t *self_p,
+                            struct field_info_t *field_info_p)
 {
     uint8_t *buf_p;
     PyObject *value_p;
@@ -288,41 +235,34 @@ static int unpack_raw(struct bitstream_reader_t *self_p,
     value_p = PyBytes_FromStringAndSize(NULL, number_of_bytes);
     buf_p = (uint8_t *)PyBytes_AS_STRING(value_p);
     bitstream_reader_read_bytes(self_p, buf_p, number_of_bytes);
-    PyTuple_SET_ITEM(unpacked_p, index, value_p);
 
-    return (1);
+    return (value_p);
 }
 
-static int pack_zero_padding(struct bitstream_writer_t *self_p,
-                             PyObject *value_p,
-                             struct field_info_t *field_info_p)
+static void pack_zero_padding(struct bitstream_writer_t *self_p,
+                              PyObject *value_p,
+                              struct field_info_t *field_info_p)
 {
     bitstream_writer_write_repeated_bit(self_p,
                                         0,
                                         field_info_p->number_of_bits);
-
-    return (0);
 }
 
-static int pack_one_padding(struct bitstream_writer_t *self_p,
-                            PyObject *value_p,
-                            struct field_info_t *field_info_p)
+static void pack_one_padding(struct bitstream_writer_t *self_p,
+                             PyObject *value_p,
+                             struct field_info_t *field_info_p)
 {
     bitstream_writer_write_repeated_bit(self_p,
                                         1,
                                         field_info_p->number_of_bits);
-
-    return (0);
 }
 
-static int unpack_padding(struct bitstream_reader_t *self_p,
-                          PyObject *unpacked_p,
-                          int index,
-                          struct field_info_t *field_info_p)
+static PyObject *unpack_padding(struct bitstream_reader_t *self_p,
+                                struct field_info_t *field_info_p)
 {
     bitstream_reader_seek(self_p, field_info_p->number_of_bits);
 
-    return (0);
+    return (NULL);
 }
 
 static int field_info_init_signed(struct field_info_t *self_p,
@@ -449,6 +389,9 @@ static int field_info_init(struct field_info_t *self_p,
                            int number_of_bits)
 {
     int res;
+    bool is_padding;
+
+    is_padding = false;
 
     switch (kind) {
 
@@ -477,10 +420,12 @@ static int field_info_init(struct field_info_t *self_p,
         break;
 
     case 'p':
+        is_padding = true;
         res = field_info_init_zero_padding(self_p);
         break;
 
     case 'P':
+        is_padding = true;
         res = field_info_init_one_padding(self_p);
         break;
 
@@ -490,8 +435,8 @@ static int field_info_init(struct field_info_t *self_p,
         break;
     }
 
-    self_p->kind = kind;
     self_p->number_of_bits = number_of_bits;
+    self_p->is_padding = is_padding;
 
     return (res);
 }
@@ -603,9 +548,11 @@ static PyObject *pack(PyObject *module_p, PyObject *args_p)
     struct bitstream_writer_t writer;
     Py_ssize_t number_of_args;
     PyObject *packed_p;
+    PyObject *value_p;
     struct info_t *info_p;
     int i;
     int consumed_args;
+    struct field_info_t *field_p;
 
     packed_p = NULL;
     number_of_args = PyTuple_GET_SIZE(args_p);
@@ -633,10 +580,16 @@ static PyObject *pack(PyObject *module_p, PyObject *args_p)
     consumed_args = 1;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
-        consumed_args += info_p->fields[i].pack(
-            &writer,
-            PyTuple_GET_ITEM(args_p, consumed_args),
-            &info_p->fields[i]);
+        field_p = &info_p->fields[i];
+
+        if (field_p->is_padding) {
+            value_p = NULL;
+        } else {
+            value_p = PyTuple_GET_ITEM(args_p, consumed_args);
+            consumed_args++;
+        }
+
+        info_p->fields[i].pack(&writer, value_p, field_p);
     }
 
  out2:
@@ -657,6 +610,7 @@ static PyObject *unpack(PyObject *module_p, PyObject *args_p)
     PyObject *format_p;
     PyObject *data_p;
     PyObject *unpacked_p;
+    PyObject *value_p;
     char *packed_p;
     struct info_t *info_p;
     int i;
@@ -690,6 +644,8 @@ static PyObject *unpack(PyObject *module_p, PyObject *args_p)
     }
 
     if (size < ((info_p->number_of_bits + 7) / 8)) {
+        PyErr_SetString(PyExc_ValueError, "Short data.");
+
         goto out2;
     }
 
@@ -697,10 +653,159 @@ static PyObject *unpack(PyObject *module_p, PyObject *args_p)
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
-        produced_args += info_p->fields[i].unpack(&reader,
-                                                  unpacked_p,
-                                                  produced_args,
-                                                  &info_p->fields[i]);
+        value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
+
+        if (value_p != NULL) {
+            PyTuple_SET_ITEM(unpacked_p, produced_args, value_p);
+            produced_args++;
+        }
+    }
+
+ out2:
+    PyMem_RawFree(info_p);
+
+ out1:
+    if ((unpacked_p != NULL) && (PyErr_Occurred() != NULL)) {
+        Py_DECREF(unpacked_p);
+        unpacked_p = NULL;
+    }
+
+    return (unpacked_p);
+}
+
+static PyObject *pack_dict(PyObject *module_p, PyObject *args_p)
+{
+    struct bitstream_writer_t writer;
+    PyObject *format_p;
+    PyObject *names_p;
+    PyObject *values_p;
+    PyObject *packed_p;
+    PyObject *value_p;
+    struct info_t *info_p;
+    int i;
+    int res;
+    int consumed_args;
+    struct field_info_t *field_p;
+
+    packed_p = NULL;
+    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &values_p);
+
+    if (res == 0) {
+        goto out1;
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        goto out1;
+    }
+
+    if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
+        PyErr_SetString(PyExc_ValueError, "Too few names.");
+
+        goto out2;
+    }
+
+    packed_p = PyBytes_FromStringAndSize(NULL, (info_p->number_of_bits + 7) / 8);
+    bitstream_writer_init(&writer, (uint8_t *)PyBytes_AS_STRING(packed_p));
+    consumed_args = 0;
+
+    for (i = 0; i < info_p->number_of_fields; i++) {
+        field_p = &info_p->fields[i];
+
+        if (field_p->is_padding) {
+            value_p = NULL;
+        } else {
+            value_p = PyDict_GetItem(values_p,
+                                     PyList_GET_ITEM(names_p, consumed_args));
+            consumed_args++;
+
+            if (value_p == NULL) {
+                PyErr_SetString(PyExc_KeyError, "Missing value.");
+
+                goto out2;
+            }
+        }
+
+        info_p->fields[i].pack(&writer, value_p, field_p);
+    }
+
+ out2:
+    PyMem_RawFree(info_p);
+
+ out1:
+    if ((packed_p != NULL) && (PyErr_Occurred() != NULL)) {
+        Py_DECREF(packed_p);
+        packed_p = NULL;
+    }
+
+    return (packed_p);
+}
+
+static PyObject *unpack_dict(PyObject *module_p, PyObject *args_p)
+{
+    struct bitstream_reader_t reader;
+    PyObject *format_p;
+    PyObject *names_p;
+    PyObject *data_p;
+    PyObject *unpacked_p;
+    PyObject *value_p;
+    char *packed_p;
+    struct info_t *info_p;
+    int i;
+    Py_ssize_t size;
+    int res;
+    int produced_args;
+
+    unpacked_p = NULL;
+    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &data_p);
+
+    if (res == 0) {
+        goto out1;
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        goto out1;
+    }
+
+    if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
+        PyErr_SetString(PyExc_ValueError, "Too few names.");
+
+        goto out2;
+    }
+
+    unpacked_p = PyDict_New();
+
+    if (unpacked_p == NULL) {
+        goto out2;
+    }
+
+    res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
+
+    if (res == -1) {
+        goto out2;
+    }
+
+    if (size < ((info_p->number_of_bits + 7) / 8)) {
+        PyErr_SetString(PyExc_ValueError, "Short data.");
+
+        goto out2;
+    }
+
+    bitstream_reader_init(&reader, (uint8_t *)packed_p);
+    produced_args = 0;
+
+    for (i = 0; i < info_p->number_of_fields; i++) {
+        value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
+
+        if (value_p != NULL) {
+            PyDict_SetItem(unpacked_p,
+                           PyList_GET_ITEM(names_p, produced_args),
+                           value_p);
+            produced_args++;
+        }
     }
 
  out2:
@@ -718,6 +823,8 @@ static PyObject *unpack(PyObject *module_p, PyObject *args_p)
 static struct PyMethodDef methods[] = {
     { "pack", pack, METH_VARARGS },
     { "unpack", unpack, METH_VARARGS },
+    { "pack_dict", pack_dict, METH_VARARGS },
+    { "unpack_dict", unpack_dict, METH_VARARGS },
     { NULL }
 };
 
