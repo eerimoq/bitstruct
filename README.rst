@@ -37,9 +37,9 @@ To use `cbitstruct`_, do ``import cbitstruct as bitstruct``.
 `bitstruct.c` has a few limitations compared to the pure Python
 implementation:
 
-- Only ``pack()``, ``unpack()``, ``pack_dict()``, ``unpack_dict()``,
-  ``CompiledFormat.pack()``, ``CompiledFormat.unpack()`` and
-  ``compile()`` are implemented.
+- ``pack_into()``, ``unpack_from()``, ``pack_into_dict()``,
+  ``unpack_from_dict()``, ``byteswap()`` and ``calcsize()`` are not
+  implemented.
 
 - Integers and booleans must be 64 bits or less.
 

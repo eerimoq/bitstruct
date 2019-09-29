@@ -34,6 +34,12 @@ struct compiled_format_t {
     struct info_t *info_p;
 };
 
+struct compiled_format_dict_t {
+    PyObject_HEAD
+    struct info_t *info_p;
+    PyObject *names_p;
+};
+
 static void pack_signed_integer(struct bitstream_writer_t *self_p,
                                 PyObject *value_p,
                                 struct field_info_t *field_info_p)
@@ -580,15 +586,18 @@ static PyObject *pack(struct info_t *info_p,
     int i;
     struct field_info_t *field_p;
 
-    packed_p = NULL;
-
     if (number_of_args < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few arguments.");
 
-        goto out1;
+        return (NULL);
     }
 
     packed_p = PyBytes_FromStringAndSize(NULL, (info_p->number_of_bits + 7) / 8);
+
+    if (packed_p == NULL) {
+        return (NULL);
+    }
+
     bitstream_writer_init(&writer, (uint8_t *)PyBytes_AS_STRING(packed_p));
 
     for (i = 0; i < info_p->number_of_fields; i++) {
@@ -604,8 +613,7 @@ static PyObject *pack(struct info_t *info_p,
         info_p->fields[i].pack(&writer, value_p, field_p);
     }
 
- out1:
-    if ((packed_p != NULL) && (PyErr_Occurred() != NULL)) {
+    if (PyErr_Occurred() != NULL) {
         Py_DECREF(packed_p);
         packed_p = NULL;
     }
@@ -653,7 +661,7 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p)
     unpacked_p = PyTuple_New(info_p->number_of_non_padding_fields);
 
     if (unpacked_p == NULL) {
-        goto out1;
+        return (NULL);
     }
 
     res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
@@ -681,7 +689,7 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p)
     }
 
  out1:
-    if ((unpacked_p != NULL) && (PyErr_Occurred() != NULL)) {
+    if (PyErr_Occurred() != NULL) {
         Py_DECREF(unpacked_p);
         unpacked_p = NULL;
     }
@@ -715,40 +723,29 @@ static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
     return (unpacked_p);
 }
 
-static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
+static PyObject *pack_dict(struct info_t *info_p,
+                           PyObject *names_p,
+                           PyObject *data_p)
 {
     struct bitstream_writer_t writer;
-    PyObject *format_p;
-    PyObject *names_p;
-    PyObject *values_p;
     PyObject *packed_p;
     PyObject *value_p;
-    struct info_t *info_p;
     int i;
-    int res;
     int consumed_args;
     struct field_info_t *field_p;
-
-    packed_p = NULL;
-    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &values_p);
-
-    if (res == 0) {
-        goto out1;
-    }
-
-    info_p = parse_format(format_p);
-
-    if (info_p == NULL) {
-        goto out1;
-    }
 
     if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
 
-        goto out2;
+        return (NULL);
     }
 
     packed_p = PyBytes_FromStringAndSize(NULL, (info_p->number_of_bits + 7) / 8);
+
+    if (packed_p == NULL) {
+        return (NULL);
+    }
+
     bitstream_writer_init(&writer, (uint8_t *)PyBytes_AS_STRING(packed_p));
     consumed_args = 0;
 
@@ -758,25 +755,20 @@ static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
         if (field_p->is_padding) {
             value_p = NULL;
         } else {
-            value_p = PyDict_GetItem(values_p,
+            value_p = PyDict_GetItem(data_p,
                                      PyList_GET_ITEM(names_p, consumed_args));
             consumed_args++;
 
             if (value_p == NULL) {
                 PyErr_SetString(PyExc_KeyError, "Missing value.");
-
-                goto out2;
+                break;
             }
         }
 
         info_p->fields[i].pack(&writer, value_p, field_p);
     }
 
- out2:
-    PyMem_RawFree(info_p);
-
- out1:
-    if ((packed_p != NULL) && (PyErr_Occurred() != NULL)) {
+    if (PyErr_Occurred() != NULL) {
         Py_DECREF(packed_p);
         packed_p = NULL;
     }
@@ -784,56 +776,70 @@ static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
     return (packed_p);
 }
 
-static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
+static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
 {
-    struct bitstream_reader_t reader;
     PyObject *format_p;
     PyObject *names_p;
     PyObject *data_p;
+    PyObject *packed_p;
+    struct info_t *info_p;
+    int res;
+
+    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &data_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        return (NULL);
+    }
+
+    packed_p = pack_dict(info_p, names_p, data_p);
+    PyMem_RawFree(info_p);
+
+    return (packed_p);
+}
+
+static PyObject *unpack_dict(struct info_t *info_p,
+                             PyObject *names_p,
+                             PyObject *data_p)
+{
+    struct bitstream_reader_t reader;
     PyObject *unpacked_p;
     PyObject *value_p;
     char *packed_p;
-    struct info_t *info_p;
     int i;
     Py_ssize_t size;
     int res;
     int produced_args;
 
     unpacked_p = NULL;
-    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &data_p);
-
-    if (res == 0) {
-        goto out1;
-    }
-
-    info_p = parse_format(format_p);
-
-    if (info_p == NULL) {
-        goto out1;
-    }
 
     if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
 
-        goto out2;
+        return (NULL);
     }
 
     unpacked_p = PyDict_New();
 
     if (unpacked_p == NULL) {
-        goto out2;
+        return (NULL);
     }
 
     res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
 
     if (res == -1) {
-        goto out2;
+        goto out1;
     }
 
     if (size < ((info_p->number_of_bits + 7) / 8)) {
         PyErr_SetString(PyExc_ValueError, "Short data.");
 
-        goto out2;
+        goto out1;
     }
 
     bitstream_reader_init(&reader, (uint8_t *)packed_p);
@@ -850,14 +856,38 @@ static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
         }
     }
 
- out2:
-    PyMem_RawFree(info_p);
-
  out1:
-    if ((unpacked_p != NULL) && (PyErr_Occurred() != NULL)) {
+    if (PyErr_Occurred() != NULL) {
         Py_DECREF(unpacked_p);
         unpacked_p = NULL;
     }
+
+    return (unpacked_p);
+}
+
+static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
+{
+    PyObject *format_p;
+    PyObject *names_p;
+    PyObject *data_p;
+    PyObject *unpacked_p;
+    struct info_t *info_p;
+    int res;
+
+    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &data_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        return (NULL);
+    }
+
+    unpacked_p = unpack_dict(info_p, names_p, data_p);
+    PyMem_RawFree(info_p);
 
     return (unpacked_p);
 }
@@ -886,14 +916,14 @@ static void compiled_format_dealloc(struct compiled_format_t *self_p)
     PyMem_RawFree(self_p->info_p);
 }
 
-static PyObject *compiled_format_pack(struct compiled_format_t *self_p,
-                                      PyObject *args_p)
+static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
+                                        PyObject *args_p)
 {
     return (pack(self_p->info_p, args_p, 0, PyTuple_GET_SIZE(args_p)));
 }
 
-static PyObject *compiled_format_unpack(struct compiled_format_t *self_p,
-                                        PyObject *args_p)
+static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
+                                          PyObject *args_p)
 {
     PyObject *data_p;
     int res;
@@ -908,8 +938,8 @@ static PyObject *compiled_format_unpack(struct compiled_format_t *self_p,
 }
 
 static struct PyMethodDef compiled_format_methods[] = {
-    { "pack", (PyCFunction)compiled_format_pack, METH_VARARGS },
-    { "unpack", (PyCFunction)compiled_format_unpack, METH_VARARGS },
+    { "pack", (PyCFunction)m_compiled_format_pack, METH_VARARGS },
+    { "unpack", (PyCFunction)m_compiled_format_unpack, METH_VARARGS },
     { NULL }
 };
 
@@ -922,6 +952,65 @@ static PyTypeObject compiled_format_type = {
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     .tp_dealloc = (destructor)compiled_format_dealloc,
     .tp_methods = compiled_format_methods,
+};
+
+static PyObject *compiled_format_dict_new(PyTypeObject *subtype_p,
+                                          PyObject *format_p,
+                                          PyObject *names_p)
+{
+    struct compiled_format_dict_t *self_p;
+
+    self_p = (struct compiled_format_dict_t *)subtype_p->tp_alloc(subtype_p, 0);
+
+    if (self_p != NULL) {
+        self_p->info_p = parse_format(format_p);
+
+        if (self_p->info_p == NULL) {
+            PyObject_Free(self_p);
+            self_p = NULL;
+        } else {
+            Py_INCREF(names_p);
+            self_p->names_p = names_p;
+        }
+    }
+
+    return ((PyObject *)self_p);
+}
+
+static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p)
+{
+    PyMem_RawFree(self_p->info_p);
+    Py_DECREF(self_p->names_p);
+}
+
+static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self_p,
+                                             PyObject *data_p)
+{
+    return (pack_dict(self_p->info_p, self_p->names_p, data_p));
+}
+
+static PyObject *m_compiled_format_dict_unpack(
+    struct compiled_format_dict_t *self_p,
+    PyObject *data_p)
+{
+    return (unpack_dict(self_p->info_p, self_p->names_p, data_p));
+}
+
+static struct PyMethodDef compiled_format_dict_methods[] = {
+    { "pack", (PyCFunction)m_compiled_format_dict_pack, METH_O },
+    { "unpack", (PyCFunction)m_compiled_format_dict_unpack, METH_O },
+    { NULL }
+};
+
+static PyTypeObject compiled_format_dict_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "bitstruct.c.CompiledFormatDict",
+    .tp_doc = NULL,
+    .tp_basicsize = sizeof(struct compiled_format_dict_t),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_dealloc = (destructor)compiled_format_dict_dealloc,
+    .tp_methods = compiled_format_dict_methods,
 };
 
 static PyObject *m_compile(PyObject *module_p,
@@ -938,7 +1027,7 @@ static PyObject *m_compile(PyObject *module_p,
         NULL
     };
 
-    names_p = NULL;
+    names_p = Py_None;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "O|O",
@@ -950,12 +1039,13 @@ static PyObject *m_compile(PyObject *module_p,
         return (NULL);
     }
 
-    if (names_p == NULL) {
+    if (names_p == Py_None) {
         compiled_format_p = compiled_format_new(&compiled_format_type,
                                                 format_p);
     } else {
-        PyErr_SetString(PyExc_NotImplementedError, "CompiledFormatDict.");
-        compiled_format_p = NULL;
+        compiled_format_p = compiled_format_dict_new(&compiled_format_dict_type,
+                                                     format_p,
+                                                     names_p);
     }
 
     if ((compiled_format_p != NULL) && (PyErr_Occurred() != NULL)) {
@@ -987,22 +1077,19 @@ PyMODINIT_FUNC PyInit_c(void)
 {
     PyObject *module_p;
 
-    /* Module creation. */
     module_p = PyModule_Create(&module);
 
     if (module_p == NULL) {
         return (NULL);
     }
 
-    /* CompiledFormat type creation. */
     if (PyType_Ready(&compiled_format_type) < 0) {
         return (NULL);
     }
 
-    Py_INCREF(&compiled_format_type);
-    PyModule_AddObject(module_p,
-                       "CompiledFormat",
-                       (PyObject *)&compiled_format_type);
+    if (PyType_Ready(&compiled_format_dict_type) < 0) {
+        return (NULL);
+    }
 
     return (module_p);
 }

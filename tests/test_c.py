@@ -282,14 +282,36 @@ class CTest(unittest.TestCase):
         unpacked = cf.unpack(b'\x3e\x82\x16')
         self.assertEqual(unpacked, (0, 0, -2, 65, 22))
 
+    def test_compile_pack_unpack_formats(self):
+        if sys.version_info[0] < 3:
+            return
+
+        fmts = [
+            ('u1s2p3',         None, (1, -1)),
+            # ('u1 s2 p3',       None, (1, -1)),
+            ('u1s2p3',         None, (1, -1)),
+            ('u1s2p3',   ['a', 'b'], {'a': 1, 'b': -1})
+        ]
+
+        for fmt, names, decoded in fmts:
+            if names is None:
+                cf = bitstruct.c.compile(fmt)
+                packed_1 = cf.pack(*decoded)
+                packed_2 = pack(fmt, *decoded)
+            else:
+                cf = bitstruct.c.compile(fmt, names)
+                packed_1 = cf.pack(decoded)
+                packed_2 = pack_dict(fmt, names, decoded)
+
+            self.assertEqual(packed_1, b'\xe0')
+            self.assertEqual(packed_2, b'\xe0')
+
     def test_compile_formats(self):
         if sys.version_info[0] < 3:
             return
 
         bitstruct.c.compile('p1u1')
-
-        with self.assertRaises(NotImplementedError):
-            bitstruct.c.compile('p1u1', ['a'])
+        bitstruct.c.compile('p1u1', ['a'])
 
         with self.assertRaises(TypeError):
             bitstruct.c.compile()
