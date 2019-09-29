@@ -1,6 +1,7 @@
 |buildstatus|_
 |appveyor|_
 |coverage|_
+|codecov|_
 
 About
 =====
@@ -214,6 +215,9 @@ Contributing
 
 .. |coverage| image:: https://coveralls.io/repos/github/eerimoq/bitstruct/badge.svg?branch=master
 .. _coverage: https://coveralls.io/github/eerimoq/bitstruct
+
+.. |codecov| image:: https://codecov.io/gh/eerimoq/bitstruct/branch/master/graph/badge.svg
+.. _codecov: https://codecov.io/gh/eerimoq/bitstruct
 
 .. _packing: http://bitstruct.readthedocs.io/en/latest/#bitstruct.pack
 
