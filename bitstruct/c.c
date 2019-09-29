@@ -30,7 +30,7 @@ struct info_t {
 };
 
 struct compiled_format_t {
-    PyObject_HEAD;
+    PyObject_HEAD
     struct info_t *info_p;
 };
 
