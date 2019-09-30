@@ -178,6 +178,64 @@ class CTest(unittest.TestCase):
         unpacked = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
 
+    def test_pack_unpack(self):
+        """Pack and unpack values.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        packed = pack('u1u1s6u7u9', 0, 0, -2, 65, 22)
+        unpacked = unpack('u1u1s6u7u9', packed)
+        self.assertEqual(unpacked, (0, 0, -2, 65, 22))
+
+        packed = pack('f64', 1.0)
+        unpacked = unpack('f64', packed)
+        self.assertEqual(unpacked, (1.0, ))
+
+        if sys.version_info >= (3, 6):
+            packed = pack('f16', 1.0)
+            unpacked = unpack('f16', packed)
+            self.assertEqual(unpacked, (1.0, ))
+
+    def test_calcsize(self):
+        """Calculate size.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        size = calcsize('u1u1s6u7u9')
+        self.assertEqual(size, 24)
+
+        size = calcsize('u1')
+        self.assertEqual(size, 1)
+
+        size = calcsize('u1s6u7u9')
+        self.assertEqual(size, 23)
+
+        size = calcsize('b1s6u7u9p1t8')
+        self.assertEqual(size, 32)
+
+        size = calcsize('b1s6u7u9P1t8')
+        self.assertEqual(size, 32)
+
+    def test_compiled_calcsize(self):
+        """Calculate size.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        cf = bitstruct.c.compile('u1u1s6u7u9')
+        self.assertEqual(cf.calcsize(), 24)
+
+        cf = bitstruct.c.compile('u1u1s6u7u9', ['a', 'b', 'c', 'd', 'e'])
+        self.assertEqual(cf.calcsize(), 24)
+
     def test_unpack_from(self):
         """Unpack values at given bit offset.
 

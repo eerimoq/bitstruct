@@ -1007,6 +1007,28 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
     return (unpacked_p);
 }
 
+static PyObject *calcsize(struct info_t *info_p)
+{
+    return (PyLong_FromLong(info_p->number_of_bits));
+}
+
+static PyObject *m_calcsize(PyObject *module_p, PyObject *format_p)
+{
+    PyObject *size_p;
+    struct info_t *info_p;
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        return (NULL);
+    }
+
+    size_p = calcsize(info_p);
+    PyMem_RawFree(info_p);
+
+    return (size_p);
+}
+
 static PyObject *compiled_format_new(PyTypeObject *subtype_p,
                                      PyObject *format_p)
 {
@@ -1052,10 +1074,9 @@ static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
     return (unpack(self_p->info_p, data_p, 0));
 }
 
-static PyObject *m_compiled_format_unpack_from(
-    struct compiled_format_t *self_p,
-    PyObject *args_p,
-    PyObject *kwargs_p)
+static PyObject *m_compiled_format_unpack_from(struct compiled_format_t *self_p,
+                                               PyObject *args_p,
+                                               PyObject *kwargs_p)
 {
     PyObject *data_p;
     PyObject *offset_p;
@@ -1081,6 +1102,11 @@ static PyObject *m_compiled_format_unpack_from(
     return (unpack_from(self_p->info_p, data_p, offset_p));
 }
 
+static PyObject *m_compiled_format_calcsize(struct compiled_format_t *self_p)
+{
+    return (calcsize(self_p->info_p));
+}
+
 static struct PyMethodDef compiled_format_methods[] = {
     { "pack", (PyCFunction)m_compiled_format_pack, METH_VARARGS },
     { "unpack", (PyCFunction)m_compiled_format_unpack, METH_VARARGS },
@@ -1089,6 +1115,7 @@ static struct PyMethodDef compiled_format_methods[] = {
         (PyCFunction)m_compiled_format_unpack_from,
         METH_VARARGS | METH_KEYWORDS
     },
+    { "calcsize", (PyCFunction)m_compiled_format_calcsize, METH_NOARGS },
     { NULL }
 };
 
@@ -1174,6 +1201,12 @@ static PyObject *m_compiled_format_dict_unpack_from(
     return (unpack_from_dict(self_p->info_p, self_p->names_p, data_p, offset_p));
 }
 
+static PyObject *m_compiled_format_dict_calcsize(
+    struct compiled_format_dict_t *self_p)
+{
+    return (calcsize(self_p->info_p));
+}
+
 static struct PyMethodDef compiled_format_dict_methods[] = {
     { "pack", (PyCFunction)m_compiled_format_dict_pack, METH_O },
     { "unpack", (PyCFunction)m_compiled_format_dict_unpack, METH_O },
@@ -1182,6 +1215,7 @@ static struct PyMethodDef compiled_format_dict_methods[] = {
         (PyCFunction)m_compiled_format_dict_unpack_from,
         METH_VARARGS | METH_KEYWORDS
     },
+    { "calcsize", (PyCFunction)m_compiled_format_dict_calcsize, METH_NOARGS },
     { NULL }
 };
 
@@ -1242,6 +1276,7 @@ static struct PyMethodDef methods[] = {
         (PyCFunction)m_unpack_from_dict,
         METH_VARARGS | METH_KEYWORDS
     },
+    { "calcsize", m_calcsize, METH_O },
     { "compile", (PyCFunction)m_compile, METH_VARARGS | METH_KEYWORDS },
     { NULL }
 };
