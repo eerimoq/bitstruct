@@ -641,7 +641,7 @@ static PyObject *m_pack(PyObject *module_p, PyObject *args_p)
     return (packed_p);
 }
 
-static PyObject *unpack(struct info_t *info_p, PyObject *data_p)
+static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
 {
     struct bitstream_reader_t reader;
     PyObject *unpacked_p;
@@ -664,13 +664,14 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p)
         goto out1;
     }
 
-    if (size < ((info_p->number_of_bits + 7) / 8)) {
+    if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
         PyErr_SetString(PyExc_ValueError, "Short data.");
 
         goto out1;
     }
 
     bitstream_reader_init(&reader, (uint8_t *)packed_p);
+    bitstream_reader_seek(&reader, offset);
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
@@ -711,7 +712,64 @@ static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
-    unpacked_p = unpack(info_p, data_p);
+    unpacked_p = unpack(info_p, data_p, 0);
+    PyMem_RawFree(info_p);
+
+    return (unpacked_p);
+}
+
+static PyObject *unpack_from(struct info_t *info_p,
+                             PyObject *data_p,
+                             PyObject *offset_p)
+{
+    unsigned long offset;
+
+    offset = PyLong_AsUnsignedLong(offset_p);
+
+    if (offset == (unsigned long)-1) {
+        return (NULL);
+    }
+
+    return (unpack(info_p, data_p, offset));
+}
+
+static PyObject *m_unpack_from(PyObject *module_p,
+                               PyObject *args_p,
+                               PyObject *kwargs_p)
+{
+    PyObject *format_p;
+    PyObject *data_p;
+    PyObject *offset_p;
+    PyObject *unpacked_p;
+    struct info_t *info_p;
+    int res;
+    static char *keywords[] = {
+        "fmt",
+        "data",
+        "offset",
+        NULL
+    };
+
+    offset_p = _PyLong_Zero;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OO|O",
+                                      &keywords[0],
+                                      &format_p,
+                                      &data_p,
+                                      &offset_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        return (NULL);
+    }
+
+    unpacked_p = unpack_from(info_p, data_p, offset_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -799,7 +857,8 @@ static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
 
 static PyObject *unpack_dict(struct info_t *info_p,
                              PyObject *names_p,
-                             PyObject *data_p)
+                             PyObject *data_p,
+                             long offset)
 {
     struct bitstream_reader_t reader;
     PyObject *unpacked_p;
@@ -828,13 +887,14 @@ static PyObject *unpack_dict(struct info_t *info_p,
         goto out1;
     }
 
-    if (size < ((info_p->number_of_bits + 7) / 8)) {
+    if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
         PyErr_SetString(PyExc_ValueError, "Short data.");
 
         goto out1;
     }
 
     bitstream_reader_init(&reader, (uint8_t *)packed_p);
+    bitstream_reader_seek(&reader, offset);
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
@@ -878,7 +938,68 @@ static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
-    unpacked_p = unpack_dict(info_p, names_p, data_p);
+    unpacked_p = unpack_dict(info_p, names_p, data_p, 0);
+    PyMem_RawFree(info_p);
+
+    return (unpacked_p);
+}
+
+static PyObject *unpack_from_dict(struct info_t *info_p,
+                                  PyObject *names_p,
+                                  PyObject *data_p,
+                                  PyObject *offset_p)
+{
+    unsigned long offset;
+
+    offset = PyLong_AsUnsignedLong(offset_p);
+
+    if (offset == (unsigned long)-1) {
+        return (NULL);
+    }
+
+    return (unpack_dict(info_p, names_p, data_p, offset));
+}
+
+static PyObject *m_unpack_from_dict(PyObject *module_p,
+                                    PyObject *args_p,
+                                    PyObject *kwargs_p)
+{
+    PyObject *format_p;
+    PyObject *names_p;
+    PyObject *data_p;
+    PyObject *offset_p;
+    PyObject *unpacked_p;
+    struct info_t *info_p;
+    int res;
+    static char *keywords[] = {
+        "fmt",
+        "names",
+        "data",
+        "offset",
+        NULL
+    };
+
+    offset_p = _PyLong_Zero;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OOO|O",
+                                      &keywords[0],
+                                      &format_p,
+                                      &names_p,
+                                      &data_p,
+                                      &offset_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    info_p = parse_format(format_p);
+
+    if (info_p == NULL) {
+        return (NULL);
+    }
+
+    unpacked_p = unpack_from_dict(info_p, names_p, data_p, offset_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -926,12 +1047,46 @@ static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
         return (NULL);
     }
 
-    return (unpack(self_p->info_p, data_p));
+    return (unpack(self_p->info_p, data_p, 0));
+}
+
+static PyObject *m_compiled_format_unpack_from(
+    struct compiled_format_t *self_p,
+    PyObject *args_p,
+    PyObject *kwargs_p)
+{
+    PyObject *data_p;
+    PyObject *offset_p;
+    int res;
+    static char *keywords[] = {
+        "data",
+        "offset",
+        NULL
+    };
+
+    offset_p = _PyLong_Zero;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "O|O",
+                                      &keywords[0],
+                                      &data_p,
+                                      &offset_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    return (unpack_from(self_p->info_p, data_p, offset_p));
 }
 
 static struct PyMethodDef compiled_format_methods[] = {
     { "pack", (PyCFunction)m_compiled_format_pack, METH_VARARGS },
     { "unpack", (PyCFunction)m_compiled_format_unpack, METH_VARARGS },
+    {
+        "unpack_from",
+        (PyCFunction)m_compiled_format_unpack_from,
+        METH_VARARGS | METH_KEYWORDS
+    },
     { NULL }
 };
 
@@ -985,12 +1140,46 @@ static PyObject *m_compiled_format_dict_unpack(
     struct compiled_format_dict_t *self_p,
     PyObject *data_p)
 {
-    return (unpack_dict(self_p->info_p, self_p->names_p, data_p));
+    return (unpack_dict(self_p->info_p, self_p->names_p, data_p, 0));
+}
+
+static PyObject *m_compiled_format_dict_unpack_from(
+    struct compiled_format_dict_t *self_p,
+    PyObject *args_p,
+    PyObject *kwargs_p)
+{
+    PyObject *data_p;
+    PyObject *offset_p;
+    int res;
+    static char *keywords[] = {
+        "data",
+        "offset",
+        NULL
+    };
+
+    offset_p = _PyLong_Zero;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "O|O",
+                                      &keywords[0],
+                                      &data_p,
+                                      &offset_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    return (unpack_from_dict(self_p->info_p, self_p->names_p, data_p, offset_p));
 }
 
 static struct PyMethodDef compiled_format_dict_methods[] = {
     { "pack", (PyCFunction)m_compiled_format_dict_pack, METH_O },
     { "unpack", (PyCFunction)m_compiled_format_dict_unpack, METH_O },
+    {
+        "unpack_from",
+        (PyCFunction)m_compiled_format_dict_unpack_from,
+        METH_VARARGS | METH_KEYWORDS
+    },
     { NULL }
 };
 
@@ -1042,8 +1231,15 @@ static PyObject *m_compile(PyObject *module_p,
 static struct PyMethodDef methods[] = {
     { "pack", m_pack, METH_VARARGS },
     { "unpack", m_unpack, METH_VARARGS },
+    { "unpack_from", (PyCFunction)m_unpack_from, METH_VARARGS | METH_KEYWORDS },
+    { "unpack", m_unpack, METH_VARARGS },
     { "pack_dict", m_pack_dict, METH_VARARGS },
     { "unpack_dict", m_unpack_dict, METH_VARARGS },
+    {
+        "unpack_from_dict",
+        (PyCFunction)m_unpack_from_dict,
+        METH_VARARGS | METH_KEYWORDS
+    },
     { "compile", (PyCFunction)m_compile, METH_VARARGS | METH_KEYWORDS },
     { NULL }
 };

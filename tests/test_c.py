@@ -178,6 +178,44 @@ class CTest(unittest.TestCase):
         unpacked = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
 
+    def test_unpack_from(self):
+        """Unpack values at given bit offset.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        unpacked = unpack_from('u1u1s6u7u9', b'\x1f\x41\x0b\x00', 1)
+        self.assertEqual(unpacked, (0, 0, -2, 65, 22))
+
+        unpacked = unpack_from('u1', b'\x80')
+        self.assertEqual(unpacked, (1, ))
+
+        unpacked = unpack_from('u1', b'\x08', 4)
+        self.assertEqual(unpacked, (1, ))
+
+        with self.assertRaises(ValueError):
+            unpack_from('u1', b'\xff', 8)
+
+        with self.assertRaises(TypeError):
+            unpack_from('u1', b'\xff', None)
+
+    def test_compiled_unpack_from(self):
+        """Unpack values at given bit offset.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        cf = bitstruct.c.compile('u1')
+        unpacked = cf.unpack_from(b'\x40', 1)
+        self.assertEqual(unpacked, (1, ))
+
+        unpacked = cf.unpack_from(b'\x80')
+        self.assertEqual(unpacked, (1, ))
+
     def test_pack_unpack_raw(self):
         """Pack and unpack raw values.
 
@@ -225,6 +263,51 @@ class CTest(unittest.TestCase):
 
         self.assertEqual(pack_dict(fmt, names, unpacked), packed)
         self.assertEqual(unpack_dict(fmt, names, packed), unpacked)
+
+    def test_pack_into_unpack_from_dict(self):
+        if sys.version_info[0] < 3:
+            return
+
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        packed = b'\x3e\x82\x16'
+        fmt = 'u1u1s6u7u9'
+        names = ['foo', 'bar', 'fie', 'fum', 'fam']
+
+        with self.assertRaises(NameError):
+            actual = bytearray(3)
+            pack_into_dict(fmt, names, actual, 0, unpacked)
+            self.assertEqual(actual, packed)
+
+        self.assertEqual(unpack_from_dict(fmt, names, packed), unpacked)
+
+    def test_compiled_pack_into_unpack_from_dict(self):
+        if sys.version_info[0] < 3:
+            return
+
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        packed = b'\x3e\x82\x16'
+        fmt = 'u1u1s6u7u9'
+        names = ['foo', 'bar', 'fie', 'fum', 'fam']
+        cf = bitstruct.c.compile(fmt, names)
+
+        with self.assertRaises(AttributeError):
+            actual = bytearray(3)
+            cf.pack_into(actual, 0, unpacked)
+            self.assertEqual(actual, packed)
+
+        self.assertEqual(cf.unpack_from(packed), unpacked)
 
     def test_performance_mixed_types(self):
         """Test pack/unpack performance with mixed types.
