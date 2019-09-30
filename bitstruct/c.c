@@ -40,6 +40,8 @@ struct compiled_format_dict_t {
     PyObject *names_p;
 };
 
+static PyObject *py_zero_p = NULL;
+
 static void pack_signed_integer(struct bitstream_writer_t *self_p,
                                 PyObject *value_p,
                                 struct field_info_t *field_info_p)
@@ -750,7 +752,7 @@ static PyObject *m_unpack_from(PyObject *module_p,
         NULL
     };
 
-    offset_p = _PyLong_Zero;
+    offset_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "OO|O",
@@ -979,7 +981,7 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
         NULL
     };
 
-    offset_p = _PyLong_Zero;
+    offset_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "OOO|O",
@@ -1064,7 +1066,7 @@ static PyObject *m_compiled_format_unpack_from(
         NULL
     };
 
-    offset_p = _PyLong_Zero;
+    offset_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "O|O",
@@ -1157,7 +1159,7 @@ static PyObject *m_compiled_format_dict_unpack_from(
         NULL
     };
 
-    offset_p = _PyLong_Zero;
+    offset_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "O|O",
@@ -1255,6 +1257,8 @@ static PyModuleDef module = {
 PyMODINIT_FUNC PyInit_c(void)
 {
     PyObject *module_p;
+
+    py_zero_p = PyLong_FromLong(0);
 
     module_p = PyModule_Create(&module);
 
