@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-#define BITSTREAM_VERSION "0.2.1"
+#define BITSTREAM_VERSION "0.3.0"
 
 struct bitstream_writer_t {
     uint8_t *buf_p;
@@ -155,15 +155,6 @@ uint16_t bitstream_reader_read_u16(struct bitstream_reader_t *self_p);
 uint32_t bitstream_reader_read_u32(struct bitstream_reader_t *self_p);
 
 uint64_t bitstream_reader_read_u64(struct bitstream_reader_t *self_p);
-
-uint8_t bitstream_reader_read_u8_bits(struct bitstream_reader_t *self_p,
-                                      int number_of_bits);
-
-uint16_t bitstream_reader_read_u16_bits(struct bitstream_reader_t *self_p,
-                                        int number_of_bits);
-
-uint32_t bitstream_reader_read_u32_bits(struct bitstream_reader_t *self_p,
-                                        int number_of_bits);
 
 uint64_t bitstream_reader_read_u64_bits(struct bitstream_reader_t *self_p,
                                         int number_of_bits);

@@ -492,66 +492,63 @@ uint64_t bitstream_reader_read_u64(struct bitstream_reader_t *self_p)
     return (value);
 }
 
-uint8_t bitstream_reader_read_u8_bits(struct bitstream_reader_t *self_p,
-                                      int number_of_bits)
-{
-    uint8_t value;
-    int i;
-
-    value = 0;
-
-    for (i = 0; i < number_of_bits; i++) {
-        value <<= 1;
-        value |= (bitstream_reader_read_bit(self_p));
-    }
-
-    return (value);
-}
-
-uint16_t bitstream_reader_read_u16_bits(struct bitstream_reader_t *self_p,
-                                        int number_of_bits)
-{
-    uint16_t value;
-    int i;
-
-    value = 0;
-
-    for (i = 0; i < number_of_bits; i++) {
-        value <<= 1;
-        value |= (bitstream_reader_read_bit(self_p));
-    }
-
-    return (value);
-}
-
-uint32_t bitstream_reader_read_u32_bits(struct bitstream_reader_t *self_p,
-                                        int number_of_bits)
-{
-    uint32_t value;
-    int i;
-
-    value = 0;
-
-    for (i = 0; i < number_of_bits; i++) {
-        value <<= 1;
-        value |= (bitstream_reader_read_bit(self_p));
-    }
-
-    return (value);
-}
-
 uint64_t bitstream_reader_read_u64_bits(struct bitstream_reader_t *self_p,
                                         int number_of_bits)
 {
     uint64_t value;
     int i;
+    int first_byte_bits;
+    int last_byte_bits;
+    int full_bytes;
 
-    value = 0;
-
-    for (i = 0; i < number_of_bits; i++) {
-        value <<= 1;
-        value |= (bitstream_reader_read_bit(self_p));
+    if (number_of_bits == 0) {
+        return (0);
     }
+
+    /* Align beginning. */
+    first_byte_bits = (8 - self_p->bit_offset);
+
+    if (first_byte_bits != 8) {
+        if (number_of_bits < first_byte_bits) {
+            value = (self_p->buf_p[self_p->byte_offset] >> (first_byte_bits
+                                                            - number_of_bits));
+            value &= ((1 << number_of_bits) - 1);
+            self_p->bit_offset += number_of_bits;
+        } else {
+            value = self_p->buf_p[self_p->byte_offset];
+            value &= ((1 << first_byte_bits) - 1);
+            self_p->byte_offset++;
+            self_p->bit_offset = 0;
+        }
+
+        number_of_bits -= first_byte_bits;
+
+        if (number_of_bits <= 0) {
+            return (value);
+        }
+    } else {
+        value = 0;
+    }
+
+    /* Copy middle bytes. */
+    full_bytes = (number_of_bits / 8);
+
+    for (i = 0; i < full_bytes; i++) {
+        value <<= 8;
+        value |= self_p->buf_p[self_p->byte_offset + i];
+    }
+
+    /* Last byte. */
+    last_byte_bits = (number_of_bits % 8);
+
+    if (last_byte_bits != 0) {
+        value <<= last_byte_bits;
+        value |= (self_p->buf_p[self_p->byte_offset + full_bytes]
+                  >> (8 - last_byte_bits));
+        self_p->bit_offset = last_byte_bits;
+    }
+
+    self_p->byte_offset += full_bytes;
 
     return (value);
 }
