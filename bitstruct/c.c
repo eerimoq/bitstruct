@@ -803,6 +803,8 @@ static PyObject *pack_into_finalize(struct bitstream_writer_bounds_t *bounds_p)
         return (NULL);
     }
 
+    Py_INCREF(Py_None);
+
     return (Py_None);
 }
 
