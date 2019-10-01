@@ -599,7 +599,7 @@ class BitStructTest(unittest.TestCase):
             pack_into('u17', packed, 0, 1)
 
         self.assertEqual(str(cm.exception),
-                         'pack requires a buffer of at least 17 bits')
+                         'pack_into requires a buffer of at least 17 bits')
 
         packed = bytearray(b'\x00')
         pack_into('P4u4', packed, 0, 1)

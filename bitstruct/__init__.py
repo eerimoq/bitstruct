@@ -348,7 +348,7 @@ class _CompiledFormat(object):
 
         if len(bits) > len(buf_bits):
             raise Error(
-                'pack requires a buffer of at least {} bits'.format(
+                'pack_into requires a buffer of at least {} bits'.format(
                     len(bits)))
 
         buf[:] = _unpack_bytearray(len(bits), bits)

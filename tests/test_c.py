@@ -236,6 +236,70 @@ class CTest(unittest.TestCase):
         cf = bitstruct.c.compile('u1u1s6u7u9', ['a', 'b', 'c', 'd', 'e'])
         self.assertEqual(cf.calcsize(), 24)
 
+    def test_pack_into(self):
+        """Pack values into a buffer.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        packed = bytearray(3)
+        pack_into('u1u1s6u7u9', packed, 0, 0, 0, -2, 65, 22)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+
+        datas = [
+            (0,  b'\x80\x00'),
+            (1,  b'\x40\x00'),
+            (7,  b'\x01\x00'),
+            (15, b'\x00\x01')
+        ]
+
+        for offset, expected in datas:
+            packed = bytearray(2)
+            pack_into('u1', packed, offset, 1)
+            self.assertEqual(packed, expected)
+
+        with self.assertRaises(AssertionError):
+            packed = bytearray(b'\xff\xff\xff')
+            pack_into('p4u4p4u4p4u4', packed, 0, 1, 2, 3, fill_padding=False)
+            self.assertEqual(packed, b'\xf1\xf2\xf3')
+
+        packed = bytearray(b'\xff\xff\xff')
+        pack_into('p4u4p4u4p4u4', packed, 0, 1, 2, 3, fill_padding=True)
+        self.assertEqual(packed, b'\x01\x02\x03')
+
+        packed = bytearray(2)
+
+        with self.assertRaises(ValueError) as cm:
+            pack_into('u17', packed, 0, 1)
+
+        self.assertEqual(str(cm.exception),
+                         'pack_into requires a buffer of at least 17 bits')
+
+        packed = bytearray(b'\x00')
+        pack_into('P4u4', packed, 0, 1)
+        self.assertEqual(packed, b'\xf1')
+
+        datas = [
+            (0, b'\x7f\xff\xff\xff'),
+            (1, b'\xbf\xff\xff\xff'),
+            (7, b'\xfe\xff\xff\xff'),
+            (8, b'\xff\x7f\xff\xff'),
+            (15, b'\xff\xfe\xff\xff'),
+            (16, b'\xff\xff\x7f\xff'),
+            (31, b'\xff\xff\xff\xfe')
+        ]
+
+        for offset, expected in datas:
+            packed = bytearray(b'\xff\xff\xff\xff')
+            pack_into('u1', packed, offset, 0)
+            self.assertEqual(packed, expected)
+
+        # Check for non-writable buffer.
+        with self.assertRaises(TypeError):
+            pack_into('u1', b'\x00', 0, 0)
+
     def test_unpack_from(self):
         """Unpack values at given bit offset.
 
@@ -258,6 +322,19 @@ class CTest(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             unpack_from('u1', b'\xff', None)
+
+    def test_compiled_pack_into(self):
+        """Pack values at given bit offset.
+
+        """
+
+        if sys.version_info[0] < 3:
+            return
+
+        cf = bitstruct.c.compile('u2')
+        packed = bytearray(2)
+        cf.pack_into(packed, 7, 3)
+        self.assertEqual(packed, b'\x01\x80')
 
     def test_compiled_unpack_from(self):
         """Unpack values at given bit offset.
@@ -337,10 +414,9 @@ class CTest(unittest.TestCase):
         fmt = 'u1u1s6u7u9'
         names = ['foo', 'bar', 'fie', 'fum', 'fam']
 
-        with self.assertRaises(NameError):
-            actual = bytearray(3)
-            pack_into_dict(fmt, names, actual, 0, unpacked)
-            self.assertEqual(actual, packed)
+        actual = bytearray(3)
+        pack_into_dict(fmt, names, actual, 0, unpacked)
+        self.assertEqual(actual, packed)
 
         self.assertEqual(unpack_from_dict(fmt, names, packed), unpacked)
 
@@ -360,10 +436,9 @@ class CTest(unittest.TestCase):
         names = ['foo', 'bar', 'fie', 'fum', 'fam']
         cf = bitstruct.c.compile(fmt, names)
 
-        with self.assertRaises(AttributeError):
-            actual = bytearray(3)
-            cf.pack_into(actual, 0, unpacked)
-            self.assertEqual(actual, packed)
+        actual = bytearray(3)
+        cf.pack_into(actual, 0, unpacked)
+        self.assertEqual(actual, packed)
 
         self.assertEqual(cf.unpack_from(packed), unpacked)
 

@@ -38,8 +38,7 @@ To use `cbitstruct`_, do ``import cbitstruct as bitstruct``.
 `bitstruct.c` has a few limitations compared to the pure Python
 implementation:
 
-- ``pack_into()``, ``pack_into_dict()`` and ``byteswap()`` are not
-  implemented.
+- ``byteswap()`` is not implemented.
 
 - Integers and booleans must be 64 bits or less.
 
