@@ -763,10 +763,10 @@ static long parse_offset(PyObject *offset_p)
         return (-1);
     }
 
-    if (offset > INT_MAX) {
+    if (offset > 0x7fffffff) {
         PyErr_Format(PyExc_ValueError,
                      "Offset must be less or equal to %d bits.",
-                     INT_MAX);
+                     0x7fffffff);
 
         return (-1);
     }

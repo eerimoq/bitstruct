@@ -682,27 +682,27 @@ class CTest(unittest.TestCase):
         # Offset too big.
         with self.assertRaises(ValueError) as cm:
             packed = bytearray(1)
-            pack_into('u1', packed, sys.maxsize // 2, 1)
+            pack_into('u1', packed, 0x80000000, 1)
 
         self.assertIn("Offset must be less or equal to ", str(cm.exception))
 
         # Offset too big.
         with self.assertRaises(ValueError) as cm:
             packed = bytearray(1)
-            pack_into_dict('u1', ['a'], packed, sys.maxsize // 2, {'a': 1})
+            pack_into_dict('u1', ['a'], packed, 0x80000000, {'a': 1})
 
         self.assertIn("Offset must be less or equal to ", str(cm.exception))
 
         # Offset too big.
         with self.assertRaises(ValueError) as cm:
-            unpack_from('u1', b'\x00', sys.maxsize // 2)
+            unpack_from('u1', b'\x00', 0x80000000)
 
         self.assertIn("Offset must be less or equal to ", str(cm.exception))
 
         # Offset too big.
         with self.assertRaises(ValueError) as cm:
             packed = bytearray(1)
-            unpack_from_dict('u1', ['a'], b'\x00', sys.maxsize // 2)
+            unpack_from_dict('u1', ['a'], b'\x00', 0x80000000)
 
         self.assertIn("Offset must be less or equal to ", str(cm.exception))
 
