@@ -46,7 +46,7 @@ implementation:
 
 - No range checks for integers less than 64 bits.
 
-- ``byteswap()`` can only swap 1, 2, 4 or 8 bytes.
+- ``byteswap()`` can only swap 1, 2, 4 and 8 bytes.
 
 See `cbitstruct`_ for its limitations.
 
