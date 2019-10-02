@@ -463,50 +463,6 @@ class CTest(unittest.TestCase):
 
         self.assertEqual(cf.unpack_from(packed), unpacked)
 
-    def test_performance_mixed_types(self):
-        """Test pack/unpack performance with mixed types.
-
-        """
-
-        if sys.version_info[0] < 3:
-            return
-
-        print()
-
-        time = timeit.timeit("pack('s6u7r40b1t152', "
-                             "-2, 22, b'\x01\x01\x03\x04\x05', "
-                             "True, u'foo fie bar gom gum')",
-                             setup="from bitstruct.c import pack",
-                             number=50000)
-        print("c pack time: {} s ({} s/pack)".format(time, time / 50000))
-
-        time = timeit.timeit(
-            "fmt.pack(-2, 22, b'\x01\x01\x03\x04\x05', "
-            "True, u'foo fie bar gom gum')",
-            setup="import bitstruct.c ; fmt = bitstruct.c.compile('s6u7r40b1t152')",
-            number=50000)
-        print("c pack time compiled: {} s ({} s/pack)".format(time, time / 50000))
-
-        time = timeit.timeit("unpack('s6u7r40b1t152', "
-                             "b'\\xf8\\xb0\\x08\\x08\\x18 "
-                             "-\\x99\\xbd\\xbc\\x81\\x99"
-                             "\\xa5\\x94\\x81\\x89\\x85"
-                             "\\xc8\\x81\\x9d\\xbd\\xb4"
-                             "\\x81\\x9d\\xd5\\xb4')",
-                             setup="from bitstruct.c import unpack",
-                             number=50000)
-        print("c unpack time: {} s ({} s/unpack)".format(time, time / 50000))
-
-        time = timeit.timeit(
-            "fmt.unpack(b'\\xf8\\xb0\\x08\\x08\\x18 "
-            "-\\x99\\xbd\\xbc\\x81\\x99"
-            "\\xa5\\x94\\x81\\x89\\x85"
-            "\\xc8\\x81\\x9d\\xbd\\xb4"
-            "\\x81\\x9d\\xd5\\xb4')",
-            setup="import bitstruct.c ; fmt = bitstruct.c.compile('s6u7r40b1t152')",
-            number=50000)
-        print("c unpack time compiled: {} s ({} s/unpack)".format(time, time / 50000))
-
     def test_compile(self):
         if sys.version_info[0] < 3:
             return
