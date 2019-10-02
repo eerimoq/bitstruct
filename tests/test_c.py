@@ -662,6 +662,33 @@ class CTest(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), "Bad format field type 'x'.")
 
+        # Offset too big.
+        with self.assertRaises(ValueError) as cm:
+            packed = bytearray(1)
+            pack_into('u1', packed, sys.maxsize // 2, 1)
+
+        self.assertIn("Offset must be less or equal to ", str(cm.exception))
+
+        # Offset too big.
+        with self.assertRaises(ValueError) as cm:
+            packed = bytearray(1)
+            pack_into_dict('u1', ['a'], packed, sys.maxsize // 2, {'a': 1})
+
+        self.assertIn("Offset must be less or equal to ", str(cm.exception))
+
+        # Offset too big.
+        with self.assertRaises(ValueError) as cm:
+            unpack_from('u1', b'\x00', sys.maxsize // 2)
+
+        self.assertIn("Offset must be less or equal to ", str(cm.exception))
+
+        # Offset too big.
+        with self.assertRaises(ValueError) as cm:
+            packed = bytearray(1)
+            unpack_from_dict('u1', ['a'], b'\x00', sys.maxsize // 2)
+
+        self.assertIn("Offset must be less or equal to ", str(cm.exception))
+
 
 if __name__ == '__main__':
     unittest.main()

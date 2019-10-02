@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-#define BITSTREAM_VERSION "0.4.0"
+#define BITSTREAM_VERSION "0.5.0"
 
 struct bitstream_writer_t {
     uint8_t *buf_p;
@@ -83,6 +83,7 @@ void bitstream_writer_write_u32(struct bitstream_writer_t *self_p,
 void bitstream_writer_write_u64(struct bitstream_writer_t *self_p,
                                 uint64_t value);
 
+/* Upper unused bits must be zero. */
 void bitstream_writer_write_u64_bits(struct bitstream_writer_t *self_p,
                                      uint64_t value,
                                      int number_of_bits);

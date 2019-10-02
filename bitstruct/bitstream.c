@@ -215,15 +215,15 @@ void bitstream_writer_write_repeated_bit(struct bitstream_writer_t *self_p,
                                          int value,
                                          int length)
 {
-    int i;
+    int rest;
 
-    for (i = 0; i < (length % 8); i++) {
-        bitstream_writer_write_bit(self_p, value);
+    if (value != 0) {
+        value = 0xff;
     }
 
-    bitstream_writer_write_repeated_u8(self_p,
-                                       (value != 0 ? 0xff : 0x00),
-                                       length / 8);
+    rest = (length % 8);
+    bitstream_writer_write_u64_bits(self_p, value & ((1 << rest) - 1), rest);
+    bitstream_writer_write_repeated_u8(self_p, value, length / 8);
 }
 
 void bitstream_writer_write_repeated_u8(struct bitstream_writer_t *self_p,

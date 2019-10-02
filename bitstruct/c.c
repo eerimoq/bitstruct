@@ -748,6 +748,27 @@ static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
     return (unpacked_p);
 }
 
+static long parse_offset(PyObject *offset_p)
+{
+    unsigned long offset;
+
+    offset = PyLong_AsUnsignedLong(offset_p);
+
+    if (offset == (unsigned long)-1) {
+        return (-1);
+    }
+
+    if (offset > INT_MAX) {
+        PyErr_Format(PyExc_ValueError,
+                     "Offset must be less or equal to %d bits.",
+                     INT_MAX);
+
+        return (-1);
+    }
+
+    return (offset);
+}
+
 static int pack_into_prepare(struct info_t *info_p,
                              PyObject *buf_p,
                              PyObject *offset_p,
@@ -756,11 +777,11 @@ static int pack_into_prepare(struct info_t *info_p,
 {
     uint8_t *packed_p;
     Py_ssize_t size;
-    unsigned long offset;
+    long offset;
 
-    offset = PyLong_AsUnsignedLong(offset_p);
+    offset = parse_offset(offset_p);
 
-    if (offset == (unsigned long)-1) {
+    if (offset == -1) {
         return (-1);
     }
 
@@ -778,9 +799,10 @@ static int pack_into_prepare(struct info_t *info_p,
 
     size = PyByteArray_GET_SIZE(buf_p);
 
-    if (size < ((info_p->number_of_bits + (long)offset + 7) / 8)) {
-        PyErr_SetString(PyExc_ValueError,
-                        "pack_into requires a buffer of at least 17 bits");
+    if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
+        PyErr_Format(PyExc_ValueError,
+                     "pack_into requires a buffer of at least %ld bits",
+                     info_p->number_of_bits + offset);
 
         return (-1);
     }
@@ -879,11 +901,11 @@ static PyObject *unpack_from(struct info_t *info_p,
                              PyObject *data_p,
                              PyObject *offset_p)
 {
-    unsigned long offset;
+    long offset;
 
-    offset = PyLong_AsUnsignedLong(offset_p);
+    offset = parse_offset(offset_p);
 
-    if (offset == (unsigned long)-1) {
+    if (offset == -1) {
         return (NULL);
     }
 
@@ -1109,11 +1131,11 @@ static PyObject *unpack_from_dict(struct info_t *info_p,
                                   PyObject *data_p,
                                   PyObject *offset_p)
 {
-    unsigned long offset;
+    long offset;
 
-    offset = PyLong_AsUnsignedLong(offset_p);
+    offset = parse_offset(offset_p);
 
-    if (offset == (unsigned long)-1) {
+    if (offset == -1) {
         return (NULL);
     }
 
