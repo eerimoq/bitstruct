@@ -253,6 +253,10 @@ class CTest(unittest.TestCase):
         unpacked = unpack('u1u5u2u16', byteswap('12', packed))
         self.assertEqual(unpacked, (1, 2, 3, 1024))
 
+        res = b'\x01\x02\x03\x04\x05\x06\x07\x08'
+        ref = b'\x08\x07\x06\x05\x04\x03\x02\x01'
+        self.assertEqual(byteswap('8', ref), res)
+
     def test_pack_into(self):
         """Pack values into a buffer.
 
