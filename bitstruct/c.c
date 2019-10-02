@@ -20,6 +20,15 @@ struct field_info_t {
     unpack_field_t unpack;
     int number_of_bits;
     bool is_padding;
+    union {
+        struct {
+            int64_t lower;
+            int64_t upper;
+        } s;
+        struct {
+            uint64_t upper;
+        } u;
+    } limits;
 };
 
 struct info_t {
@@ -46,16 +55,27 @@ static void pack_signed_integer(struct bitstream_writer_t *self_p,
                                 PyObject *value_p,
                                 struct field_info_t *field_info_p)
 {
-    uint64_t value;
+    int64_t value;
+    int64_t lower;
+    int64_t upper;
 
     value = PyLong_AsLongLong(value_p);
 
     if (field_info_p->number_of_bits < 64) {
+        lower = field_info_p->limits.s.lower;
+        upper = field_info_p->limits.s.upper;
+
+        if ((value < lower) || (value > upper)) {
+            PyErr_Format(PyExc_OverflowError,
+                         "Signed integer value %lld out of range.",
+                         (long long)value);
+        }
+
         value &= ((1ull << field_info_p->number_of_bits) - 1);
     }
 
     bitstream_writer_write_u64_bits(self_p,
-                                    value,
+                                    (uint64_t)value,
                                     field_info_p->number_of_bits);
 }
 
@@ -79,8 +99,18 @@ static void pack_unsigned_integer(struct bitstream_writer_t *self_p,
                                   PyObject *value_p,
                                   struct field_info_t *field_info_p)
 {
+    uint64_t value;
+
+    value = PyLong_AsUnsignedLongLong(value_p);
+
+    if (value > field_info_p->limits.u.upper) {
+        PyErr_Format(PyExc_OverflowError,
+                     "Unsigned integer value %llu out of range.",
+                     (unsigned long long)value);
+    }
+
     bitstream_writer_write_u64_bits(self_p,
-                                    PyLong_AsUnsignedLongLong(value_p),
+                                    value,
                                     field_info_p->number_of_bits);
 }
 
@@ -296,6 +326,8 @@ static PyObject *unpack_padding(struct bitstream_reader_t *self_p,
 static int field_info_init_signed(struct field_info_t *self_p,
                                   int number_of_bits)
 {
+    int64_t limit;
+
     self_p->pack = pack_signed_integer;
     self_p->unpack = unpack_signed_integer;
 
@@ -303,6 +335,15 @@ static int field_info_init_signed(struct field_info_t *self_p,
         PyErr_SetString(PyExc_NotImplementedError,
                         "Signed integer over 64 bits.");
         return (-1);
+    }
+
+    if (number_of_bits < 64) {
+        limit = (1ull << (number_of_bits - 1));
+        self_p->limits.s.lower = -limit;
+        self_p->limits.s.upper = (limit - 1);
+    } else {
+        self_p->limits.s.lower = 0x8000000000000000ll;
+        self_p->limits.s.upper = 0x7fffffffffffffffll;
     }
 
     return (0);
@@ -318,6 +359,12 @@ static int field_info_init_unsigned(struct field_info_t *self_p,
         PyErr_SetString(PyExc_NotImplementedError,
                         "Unsigned integer over 64 bits.");
         return (-1);
+    }
+
+    if (number_of_bits < 64) {
+        self_p->limits.u.upper = ((1ull << number_of_bits) - 1);
+    } else {
+        self_p->limits.u.upper = (uint64_t)-1;
     }
 
     return (0);
@@ -1736,7 +1783,6 @@ PyMODINIT_FUNC PyInit_c(void)
     PyObject *module_p;
 
     py_zero_p = PyLong_FromLong(0);
-
     module_p = PyModule_Create(&module);
 
     if (module_p == NULL) {

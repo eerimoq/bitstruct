@@ -733,6 +733,22 @@ class CTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             pack(None, 1)
 
+        # Out of range checks.
+        datas = [
+            ('s64', (1 << 63)),
+            ('s64', -(1 << 63) - 1),
+            ('u64', 1 << 64),
+            ('u64', -1),
+            ('u1', 2),
+            ('s1', 1),
+            ('s1', -2),
+            ('s2', 2)
+        ]
+
+        for fmt, value in datas:
+            with self.assertRaises(OverflowError) as cm:
+                pack(fmt, value)
+
 
 if __name__ == '__main__':
     unittest.main()
