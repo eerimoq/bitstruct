@@ -38,8 +38,6 @@ To use `cbitstruct`_, do ``import cbitstruct as bitstruct``.
 `bitstruct.c` has a few limitations compared to the pure Python
 implementation:
 
-- ``byteswap()`` is not implemented.
-
 - Integers and booleans must be 64 bits or less.
 
 - Text and raw must be a multiple of 8 bits.
@@ -47,6 +45,8 @@ implementation:
 - Bit endianness and byte order are not supported.
 
 - No range checks for integers less than 64 bits.
+
+- ``byteswap()`` can only swap 1, 2, 4 or 8 bytes.
 
 See `cbitstruct`_ for its limitations.
 

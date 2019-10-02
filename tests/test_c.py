@@ -236,6 +236,19 @@ class CTest(unittest.TestCase):
         cf = bitstruct.c.compile('u1u1s6u7u9', ['a', 'b', 'c', 'd', 'e'])
         self.assertEqual(cf.calcsize(), 24)
 
+    def test_byteswap(self):
+        """Byte swap.
+
+        """
+
+        res = b'\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a'
+        ref = b'\x01\x03\x02\x04\x08\x07\x06\x05\x0a\x09'
+        self.assertEqual(byteswap('12142', ref), res)
+
+        packed = pack('u1u5u2u16', 1, 2, 3, 4)
+        unpacked = unpack('u1u5u2u16', byteswap('12', packed))
+        self.assertEqual(unpacked, (1, 2, 3, 1024))
+
     def test_pack_into(self):
         """Pack values into a buffer.
 
@@ -688,6 +701,29 @@ class CTest(unittest.TestCase):
             unpack_from_dict('u1', ['a'], b'\x00', sys.maxsize // 2)
 
         self.assertIn("Offset must be less or equal to ", str(cm.exception))
+
+        # Out of data to swap.
+        datas = ['11', '2', '4', '8']
+
+        for fmt in datas:
+            with self.assertRaises(ValueError) as cm:
+                byteswap(fmt, b'\x00')
+
+            self.assertEqual(str(cm.exception), 'Out of data to swap.')
+
+        # Bad swap format.
+        with self.assertRaises(ValueError) as cm:
+            byteswap('3', b'\x00')
+
+        # Bad swap format type.
+        with self.assertRaises(TypeError):
+            byteswap(None, b'\x00')
+
+        self.assertEqual(str(cm.exception), 'Expected 1, 2, 4 or 8, but got 3.')
+
+        # Bad format type.
+        with self.assertRaises(TypeError):
+            pack(None, 1)
 
 
 if __name__ == '__main__':

@@ -533,6 +533,11 @@ static struct info_t *parse_format(PyObject *format_obj_p)
     int res;
 
     format_p = PyUnicode_AsUTF8(format_obj_p);
+
+    if (format_p == NULL) {
+        return (NULL);
+    }
+
     number_of_fields = count_number_of_fields(format_p,
                                               &number_of_padding_fields);
 
@@ -1278,6 +1283,115 @@ static PyObject *m_calcsize(PyObject *module_p, PyObject *format_p)
     return (size_p);
 }
 
+static PyObject *m_byteswap(PyObject *module_p, PyObject *args_p)
+{
+    PyObject *format_p;
+    PyObject *data_p;
+    PyObject *swapped_p;
+    const char *c_format_p;
+    uint8_t *src_p;
+    uint8_t *dst_p;
+    Py_ssize_t size;
+    int res;
+    int offset;
+
+    res = PyArg_ParseTuple(args_p, "OO", &format_p, &data_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    c_format_p = PyUnicode_AsUTF8(format_p);
+
+    if (c_format_p == NULL) {
+        return (NULL);
+    }
+
+    res = PyBytes_AsStringAndSize(data_p, (char **)&src_p, &size);
+
+    if (res == -1) {
+        return (NULL);
+    }
+
+    swapped_p = PyBytes_FromStringAndSize(NULL, size);
+
+    if (swapped_p == NULL) {
+        return (NULL);
+    }
+
+    dst_p = (uint8_t *)PyBytes_AS_STRING(swapped_p);
+    offset = 0;
+
+    while (*c_format_p != '\0') {
+        switch (*c_format_p) {
+
+        case '1':
+            if ((size - offset) < 1) {
+                goto out1;
+            }
+
+            dst_p[offset] = src_p[offset];
+            offset += 1;
+            break;
+
+        case '2':
+            if ((size - offset) < 2) {
+                goto out1;
+            }
+
+            dst_p[offset + 0] = src_p[offset + 1];
+            dst_p[offset + 1] = src_p[offset + 0];
+            offset += 2;
+            break;
+
+        case '4':
+            if ((size - offset) < 4) {
+                goto out1;
+            }
+
+            dst_p[offset + 0] = src_p[offset + 3];
+            dst_p[offset + 1] = src_p[offset + 2];
+            dst_p[offset + 2] = src_p[offset + 1];
+            dst_p[offset + 3] = src_p[offset + 0];
+            offset += 4;
+            break;
+
+        case '8':
+            if ((size - offset) < 8) {
+                goto out1;
+            }
+
+            dst_p[offset + 0] = src_p[offset + 7];
+            dst_p[offset + 1] = src_p[offset + 6];
+            dst_p[offset + 2] = src_p[offset + 5];
+            dst_p[offset + 3] = src_p[offset + 4];
+            dst_p[offset + 4] = src_p[offset + 3];
+            dst_p[offset + 5] = src_p[offset + 2];
+            dst_p[offset + 6] = src_p[offset + 1];
+            dst_p[offset + 7] = src_p[offset + 0];
+            offset += 8;
+            break;
+
+        default:
+            PyErr_Format(PyExc_ValueError,
+                         "Expected 1, 2, 4 or 8, but got %c.",
+                         (char)*c_format_p);
+            goto out2;
+        }
+
+        c_format_p++;
+    }
+
+    return (swapped_p);
+
+ out1:
+    PyErr_SetString(PyExc_ValueError, "Out of data to swap.");
+
+ out2:
+
+    return (NULL);
+}
+
 static PyObject *compiled_format_new(PyTypeObject *subtype_p,
                                      PyObject *format_p)
 {
@@ -1604,6 +1718,7 @@ static struct PyMethodDef methods[] = {
         METH_VARARGS | METH_KEYWORDS
     },
     { "calcsize", m_calcsize, METH_O },
+    { "byteswap", m_byteswap, METH_VARARGS },
     { "compile", (PyCFunction)m_compile, METH_VARARGS | METH_KEYWORDS },
     { NULL }
 };
