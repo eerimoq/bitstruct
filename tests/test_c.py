@@ -241,6 +241,10 @@ class CTest(unittest.TestCase):
 
         """
 
+        if sys.version_info[0] < 3:
+            return
+
+
         res = b'\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a'
         ref = b'\x01\x03\x02\x04\x08\x07\x06\x05\x0a\x09'
         self.assertEqual(byteswap('12142', ref), res)
