@@ -705,6 +705,25 @@ class CTest(unittest.TestCase):
             with self.assertRaises(OverflowError) as cm:
                 pack(fmt, value)
 
+        # Bad value types.
+        with self.assertRaises(TypeError) as cm:
+            pack('s1', None)
+
+        with self.assertRaises(TypeError) as cm:
+            pack('u1', None)
+
+        with self.assertRaises(TypeError) as cm:
+            pack('f16', None)
+
+        with self.assertRaises(TypeError) as cm:
+            pack('r8', None)
+
+        with self.assertRaises(TypeError) as cm:
+            pack('t8', None)
+
+        # Everything can be bool.
+        self.assertEqual(pack('b8', None), b'\x00')
+
 
 if __name__ == '__main__':
     unittest.main()

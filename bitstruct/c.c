@@ -61,6 +61,10 @@ static void pack_signed_integer(struct bitstream_writer_t *self_p,
 
     value = PyLong_AsLongLong(value_p);
 
+    if ((value == -1) && PyErr_Occurred()) {
+        return;
+    }
+
     if (field_info_p->number_of_bits < 64) {
         lower = field_info_p->limits.s.lower;
         upper = field_info_p->limits.s.upper;
@@ -102,6 +106,10 @@ static void pack_unsigned_integer(struct bitstream_writer_t *self_p,
     uint64_t value;
 
     value = PyLong_AsUnsignedLongLong(value_p);
+
+    if ((value == (uint64_t)-1) && PyErr_Occurred()) {
+        return;
+    }
 
     if (value > field_info_p->limits.u.upper) {
         PyErr_Format(PyExc_OverflowError,
@@ -326,7 +334,7 @@ static PyObject *unpack_padding(struct bitstream_reader_t *self_p,
 static int field_info_init_signed(struct field_info_t *self_p,
                                   int number_of_bits)
 {
-    int64_t limit;
+    uint64_t limit;
 
     self_p->pack = pack_signed_integer;
     self_p->unpack = unpack_signed_integer;
@@ -337,14 +345,9 @@ static int field_info_init_signed(struct field_info_t *self_p,
         return (-1);
     }
 
-    if (number_of_bits < 64) {
-        limit = (1ull << (number_of_bits - 1));
-        self_p->limits.s.lower = -limit;
-        self_p->limits.s.upper = (limit - 1);
-    } else {
-        self_p->limits.s.lower = 0x8000000000000000ll;
-        self_p->limits.s.upper = 0x7fffffffffffffffll;
-    }
+    limit = (1ull << (number_of_bits - 1));
+    self_p->limits.s.lower = -limit;
+    self_p->limits.s.upper = (limit - 1);
 
     return (0);
 }
