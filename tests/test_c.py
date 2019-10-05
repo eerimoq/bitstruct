@@ -713,7 +713,7 @@ class CTest(unittest.TestCase):
             pack('u1', None)
 
         with self.assertRaises(TypeError) as cm:
-            pack('f16', None)
+            pack('f32', None)
 
         with self.assertRaises(TypeError) as cm:
             pack('r8', None)
