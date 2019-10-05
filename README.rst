@@ -42,11 +42,13 @@ implementation:
 
 - Text and raw must be a multiple of 8 bits.
 
-- Bit endianness and byte order are not supported.
+- Bit endianness and byte order are not yet supported.
 
 - No range checks for integers less than 64 bits.
 
 - ``byteswap()`` can only swap 1, 2, 4 and 8 bytes.
+
+- Whitespaces in format strings are not yet supported.
 
 See `cbitstruct`_ for its limitations.
 
