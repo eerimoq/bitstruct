@@ -568,6 +568,11 @@ const char *parse_field(const char *format_p,
         format_p++;
     }
 
+    if (*number_of_bits_p == 0) {
+        PyErr_SetString(PyExc_ValueError, "Field of size 0.");
+        format_p = NULL;
+    }
+
     return (format_p);
 }
 

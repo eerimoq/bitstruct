@@ -724,6 +724,12 @@ class CTest(unittest.TestCase):
         # Everything can be bool.
         self.assertEqual(pack('b8', None), b'\x00')
 
+        # Zero bits bool.
+        with self.assertRaises(ValueError) as cm:
+            pack('b0', None)
+
+        self.assertEqual(str(cm.exception), 'Field of size 0.')
+
 
 if __name__ == '__main__':
     unittest.main()
