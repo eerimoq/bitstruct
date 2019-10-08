@@ -77,7 +77,7 @@ void bitstream_writer_write_bytes(struct bitstream_writer_t *self_p,
     } else {
         for (i = 0; i < length; i++) {
             dst_p[i] |= (buf_p[i] >> self_p->bit_offset);
-            dst_p[i + 1] = (buf_p[i] << (8 - self_p->bit_offset));
+            dst_p[i + 1] = (uint8_t)(buf_p[i] << (8 - self_p->bit_offset));
         }
     }
 
@@ -91,7 +91,8 @@ void bitstream_writer_write_u8(struct bitstream_writer_t *self_p,
         self_p->buf_p[self_p->byte_offset] = value;
     } else {
         self_p->buf_p[self_p->byte_offset] |= (value >> self_p->bit_offset);
-        self_p->buf_p[self_p->byte_offset + 1] = (value << (8 - self_p->bit_offset));
+        self_p->buf_p[self_p->byte_offset + 1] =
+            (uint8_t)(value << (8 - self_p->bit_offset));
     }
 
     self_p->byte_offset++;
@@ -104,7 +105,8 @@ void bitstream_writer_write_u16(struct bitstream_writer_t *self_p,
         self_p->buf_p[self_p->byte_offset] = (value >> 8);
     } else {
         self_p->buf_p[self_p->byte_offset] |= (value >> (8 + self_p->bit_offset));
-        self_p->buf_p[self_p->byte_offset + 2] = (value << (8 - self_p->bit_offset));
+        self_p->buf_p[self_p->byte_offset + 2] =
+            (uint8_t)(value << (8 - self_p->bit_offset));
         value >>= self_p->bit_offset;
     }
 
@@ -121,7 +123,8 @@ void bitstream_writer_write_u32(struct bitstream_writer_t *self_p,
         self_p->buf_p[self_p->byte_offset] = (value >> 24);
     } else {
         self_p->buf_p[self_p->byte_offset] |= (value >> (24 + self_p->bit_offset));
-        self_p->buf_p[self_p->byte_offset + 4] = (value << (8 - self_p->bit_offset));
+        self_p->buf_p[self_p->byte_offset + 4] =
+            (uint8_t)(value << (8 - self_p->bit_offset));
         value >>= self_p->bit_offset;
     }
 
@@ -174,8 +177,8 @@ void bitstream_writer_write_u64_bits(struct bitstream_writer_t *self_p,
 
     if (first_byte_bits != 8) {
         if (number_of_bits < first_byte_bits) {
-            self_p->buf_p[self_p->byte_offset] |= (value << (first_byte_bits
-                                                             - number_of_bits));
+            self_p->buf_p[self_p->byte_offset] |=
+                (uint8_t)(value << (first_byte_bits - number_of_bits));
             self_p->bit_offset += number_of_bits;
         } else {
             self_p->buf_p[self_p->byte_offset] |= (value >> (number_of_bits

@@ -51,6 +51,17 @@ struct compiled_format_dict_t {
 
 static PyObject *py_zero_p = NULL;
 
+static bool is_names_list(PyObject *names_p)
+{
+    if (!PyList_Check(names_p)) {
+        PyErr_SetString(PyExc_TypeError, "Names is not a list.");
+
+        return (false);
+    }
+
+    return (true);
+}
+
 static void pack_signed_integer(struct bitstream_writer_t *self_p,
                                 PyObject *value_p,
                                 struct field_info_t *field_info_p)
@@ -96,7 +107,7 @@ static PyObject *unpack_signed_integer(struct bitstream_reader_t *self_p,
         value |= ~(((sign_bit) << 1) - 1);
     }
 
-    return (PyLong_FromLongLong(value));
+    return (PyLong_FromLongLong((long long)value));
 }
 
 static void pack_unsigned_integer(struct bitstream_writer_t *self_p,
@@ -1053,7 +1064,7 @@ static PyObject *pack_dict(struct info_t *info_p,
     struct bitstream_writer_t writer;
     PyObject *packed_p;
 
-    if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
+    if (PyList_GET_SIZE(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
 
         return (NULL);
@@ -1091,6 +1102,10 @@ static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
+    if (!is_names_list(names_p)) {
+        return (NULL);
+    }
+
     packed_p = pack_dict(info_p, names_p, data_p);
     PyMem_RawFree(info_p);
 
@@ -1111,7 +1126,7 @@ static PyObject *unpack_dict(struct info_t *info_p,
     int res;
     int produced_args;
 
-    if (PyList_Size(names_p) < info_p->number_of_non_padding_fields) {
+    if (PyList_GET_SIZE(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
 
         return (NULL);
@@ -1177,6 +1192,10 @@ static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
     info_p = parse_format(format_p);
 
     if (info_p == NULL) {
+        return (NULL);
+    }
+
+    if (!is_names_list(names_p)) {
         return (NULL);
     }
 
@@ -1265,6 +1284,10 @@ static PyObject *m_pack_into_dict(PyObject *module_p,
         return (NULL);
     }
 
+    if (!is_names_list(names_p)) {
+        return (NULL);
+    }
+
     res_p = pack_into_dict(info_p, names_p, buf_p, offset_p, data_p);
     PyMem_RawFree(info_p);
 
@@ -1307,6 +1330,10 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
     info_p = parse_format(format_p);
 
     if (info_p == NULL) {
+        return (NULL);
+    }
+
+    if (!is_names_list(names_p)) {
         return (NULL);
     }
 
@@ -1585,6 +1612,10 @@ static PyObject *compiled_format_dict_new(PyTypeObject *subtype_p,
                                           PyObject *names_p)
 {
     struct compiled_format_dict_t *self_p;
+
+    if (!is_names_list(names_p)) {
+        return (NULL);
+    }
 
     self_p = (struct compiled_format_dict_t *)subtype_p->tp_alloc(subtype_p, 0);
 

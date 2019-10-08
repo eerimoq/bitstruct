@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-#define BITSTREAM_VERSION "0.5.0"
+#define BITSTREAM_VERSION "0.5.1"
 
 struct bitstream_writer_t {
     uint8_t *buf_p;

@@ -730,6 +730,22 @@ class CTest(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), 'Field of size 0.')
 
+        # pack/unpack dict with names as a non-list. Caused an segfault.
+        with self.assertRaises(TypeError) as cm:
+            pack_into_dict('u1', None, bytearray(b'\x00'), 0, {'a': 1})
+
+        self.assertEqual(str(cm.exception), 'Names is not a list.')
+
+        with self.assertRaises(TypeError) as cm:
+            pack_dict('u1', None, {'a': 1})
+
+        self.assertEqual(str(cm.exception), 'Names is not a list.')
+
+        with self.assertRaises(TypeError) as cm:
+            bitstruct.c.compile('u1', 1)
+
+        self.assertEqual(str(cm.exception), 'Names is not a list.')
+
 
 if __name__ == '__main__':
     unittest.main()
