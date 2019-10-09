@@ -563,6 +563,10 @@ const char *parse_field(const char *format_p,
                         int *kind_p,
                         int *number_of_bits_p)
 {
+    while (isspace(*format_p)) {
+        format_p++;
+    }
+
     *kind_p = *format_p;
     *number_of_bits_p = 0;
     format_p++;

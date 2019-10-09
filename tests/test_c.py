@@ -481,8 +481,7 @@ class CTest(unittest.TestCase):
 
         fmts = [
             ('u1s2p3',         None, (1, -1)),
-            # ('u1 s2 p3',       None, (1, -1)),
-            ('u1s2p3',         None, (1, -1)),
+            ('u1 s2 p3',       None, (1, -1)),
             ('u1s2p3',   ['a', 'b'], {'a': 1, 'b': -1})
         ]
 
@@ -745,6 +744,18 @@ class CTest(unittest.TestCase):
             bitstruct.c.compile('u1', 1)
 
         self.assertEqual(str(cm.exception), 'Names is not a list.')
+
+    def test_whitespaces(self):
+        if sys.version_info[0] < 3:
+            return
+
+        fmts = [
+            ' ',
+            ' u1     s2 p3 '
+        ]
+
+        for fmt in fmts:
+            bitstruct.c.compile(fmt)
 
 
 if __name__ == '__main__':
