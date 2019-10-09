@@ -48,8 +48,6 @@ implementation:
 
 - ``byteswap()`` can only swap 1, 2, 4 and 8 bytes.
 
-- Whitespaces in format strings are not yet supported.
-
 See `cbitstruct`_ for its limitations.
 
 Example usage
