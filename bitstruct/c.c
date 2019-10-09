@@ -716,6 +716,11 @@ static PyObject *pack(struct info_t *info_p,
     return (pack_finalize(packed_p));
 }
 
+PyDoc_STRVAR(pack___doc__,
+             "pack(fmt, *args)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_pack(PyObject *module_p, PyObject *args_p)
 {
     Py_ssize_t number_of_args;
@@ -792,6 +797,11 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
 
     return (unpacked_p);
 }
+
+PyDoc_STRVAR(unpack___doc__,
+             "unpack(fmt, data)\n"
+             "--\n"
+             "\n");
 
 static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
 {
@@ -929,6 +939,11 @@ static PyObject *pack_into(struct info_t *info_p,
     return (pack_into_finalize(&bounds));
 }
 
+PyDoc_STRVAR(pack_into___doc__,
+             "pack_into(fmt, buf, offset, *args, **kwargs)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_pack_into(PyObject *module_p,
                              PyObject *args_p,
                              PyObject *kwargs_p)
@@ -982,6 +997,11 @@ static PyObject *unpack_from(struct info_t *info_p,
 
     return (unpack(info_p, data_p, offset));
 }
+
+PyDoc_STRVAR(unpack_from___doc__,
+             "unpack_from(fmt, data, offset=0)\n"
+             "--\n"
+             "\n");
 
 static PyObject *m_unpack_from(PyObject *module_p,
                                PyObject *args_p,
@@ -1081,6 +1101,11 @@ static PyObject *pack_dict(struct info_t *info_p,
     return (pack_finalize(packed_p));
 }
 
+PyDoc_STRVAR(pack_dict___doc__,
+             "pack_dict(fmt, names, data)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
 {
     PyObject *format_p;
@@ -1174,6 +1199,11 @@ static PyObject *unpack_dict(struct info_t *info_p,
     return (unpacked_p);
 }
 
+PyDoc_STRVAR(unpack_dict___doc__,
+             "unpack_dict(fmt, names, data)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
 {
     PyObject *format_p;
@@ -1242,6 +1272,11 @@ static PyObject *pack_into_dict(struct info_t *info_p,
     return (pack_into_finalize(&bounds));
 }
 
+PyDoc_STRVAR(pack_into_dict___doc__,
+             "pack_into_dict(fmt, names, buf, offset, data, **kwargs)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_pack_into_dict(PyObject *module_p,
                                   PyObject *args_p,
                                   PyObject *kwargs_p)
@@ -1293,6 +1328,11 @@ static PyObject *m_pack_into_dict(PyObject *module_p,
 
     return (res_p);
 }
+
+PyDoc_STRVAR(unpack_from_dict___doc__,
+             "unpack_from_dict(fmt, names, data, offset=0)\n"
+             "--\n"
+             "\n");
 
 static PyObject *m_unpack_from_dict(PyObject *module_p,
                                     PyObject *args_p,
@@ -1348,6 +1388,11 @@ static PyObject *calcsize(struct info_t *info_p)
     return (PyLong_FromLong(info_p->number_of_bits));
 }
 
+PyDoc_STRVAR(calcsize___doc__,
+             "calcsize(fmt)\n"
+             "--\n"
+             "\n");
+
 static PyObject *m_calcsize(PyObject *module_p, PyObject *format_p)
 {
     PyObject *size_p;
@@ -1364,6 +1409,11 @@ static PyObject *m_calcsize(PyObject *module_p, PyObject *format_p)
 
     return (size_p);
 }
+
+PyDoc_STRVAR(byteswap___doc__,
+             "byteswap(fmt, data, offset=0)\n"
+             "--\n"
+             "\n");
 
 static PyObject *m_byteswap(PyObject *module_p, PyObject *args_p)
 {
@@ -1580,19 +1630,36 @@ static PyObject *m_compiled_format_calcsize(struct compiled_format_t *self_p)
 }
 
 static struct PyMethodDef compiled_format_methods[] = {
-    { "pack", (PyCFunction)m_compiled_format_pack, METH_VARARGS },
-    { "unpack", (PyCFunction)m_compiled_format_unpack, METH_VARARGS },
+    {
+        "pack",
+        (PyCFunction)m_compiled_format_pack,
+        METH_VARARGS,
+        pack___doc__
+    },
+    {
+        "unpack",
+        (PyCFunction)m_compiled_format_unpack,
+        METH_VARARGS,
+        unpack___doc__
+    },
     {
         "pack_into",
         (PyCFunction)m_compiled_format_pack_into,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into___doc__
     },
     {
         "unpack_from",
         (PyCFunction)m_compiled_format_unpack_from,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from___doc__
     },
-    { "calcsize", (PyCFunction)m_compiled_format_calcsize, METH_NOARGS },
+    {
+        "calcsize",
+        (PyCFunction)m_compiled_format_calcsize,
+        METH_NOARGS,
+        calcsize___doc__
+    },
     { NULL }
 };
 
@@ -1724,19 +1791,36 @@ static PyObject *m_compiled_format_dict_calcsize(
 }
 
 static struct PyMethodDef compiled_format_dict_methods[] = {
-    { "pack", (PyCFunction)m_compiled_format_dict_pack, METH_O },
-    { "unpack", (PyCFunction)m_compiled_format_dict_unpack, METH_O },
+    {
+        "pack",
+        (PyCFunction)m_compiled_format_dict_pack,
+        METH_O,
+        pack___doc__
+    },
+    {
+        "unpack",
+        (PyCFunction)m_compiled_format_dict_unpack,
+        METH_O,
+        unpack___doc__
+    },
     {
         "pack_into",
         (PyCFunction)m_compiled_format_dict_pack_into,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into___doc__
     },
     {
         "unpack_from",
         (PyCFunction)m_compiled_format_dict_unpack_from,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from___doc__
     },
-    { "calcsize", (PyCFunction)m_compiled_format_dict_calcsize, METH_NOARGS },
+    {
+        "calcsize",
+        (PyCFunction)m_compiled_format_dict_calcsize,
+        METH_NOARGS,
+        calcsize___doc__
+    },
     { NULL }
 };
 
@@ -1750,6 +1834,11 @@ static PyTypeObject compiled_format_dict_type = {
     .tp_dealloc = (destructor)compiled_format_dict_dealloc,
     .tp_methods = compiled_format_dict_methods,
 };
+
+PyDoc_STRVAR(compile___doc__,
+             "compile(fmt, names=None)\n"
+             "--\n"
+             "\n");
 
 static PyObject *m_compile(PyObject *module_p,
                            PyObject *args_p,
@@ -1786,26 +1875,72 @@ static PyObject *m_compile(PyObject *module_p,
 }
 
 static struct PyMethodDef methods[] = {
-    { "pack", m_pack, METH_VARARGS },
-    { "unpack", m_unpack, METH_VARARGS },
-    { "pack_into", (PyCFunction)m_pack_into, METH_VARARGS | METH_KEYWORDS },
-    { "unpack_from", (PyCFunction)m_unpack_from, METH_VARARGS | METH_KEYWORDS },
-    { "unpack", m_unpack, METH_VARARGS },
-    { "pack_dict", m_pack_dict, METH_VARARGS },
-    { "unpack_dict", m_unpack_dict, METH_VARARGS },
+    {
+        "pack",
+        m_pack,
+        METH_VARARGS,
+        pack___doc__
+    },
+    {
+        "unpack",
+        m_unpack,
+        METH_VARARGS,
+        unpack___doc__
+    },
+    {
+        "pack_into",
+        (PyCFunction)m_pack_into,
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into___doc__
+    },
+    {
+        "unpack_from",
+        (PyCFunction)m_unpack_from,
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from___doc__
+    },
+    {
+        "pack_dict",
+        m_pack_dict,
+        METH_VARARGS,
+        pack_dict___doc__
+    },
+    {
+        "unpack_dict",
+        m_unpack_dict,
+        METH_VARARGS,
+        unpack_dict___doc__
+    },
     {
         "pack_into_dict",
         (PyCFunction)m_pack_into_dict,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into_dict___doc__
     },
     {
         "unpack_from_dict",
         (PyCFunction)m_unpack_from_dict,
-        METH_VARARGS | METH_KEYWORDS
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from_dict___doc__
     },
-    { "calcsize", m_calcsize, METH_O },
-    { "byteswap", m_byteswap, METH_VARARGS },
-    { "compile", (PyCFunction)m_compile, METH_VARARGS | METH_KEYWORDS },
+    {
+        "calcsize",
+        m_calcsize,
+        METH_O,
+        calcsize___doc__
+    },
+    {
+        "byteswap",
+        m_byteswap,
+        METH_VARARGS,
+        byteswap___doc__
+    },
+    {
+        "compile",
+        (PyCFunction)m_compile,
+        METH_VARARGS | METH_KEYWORDS,
+        compile___doc__
+    },
     { NULL }
 };
 
