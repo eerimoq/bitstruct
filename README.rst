@@ -19,7 +19,7 @@ Installation
 
 .. code-block:: python
 
-    pip install bitstruct
+   pip install bitstruct
 
 Performance
 ===========
@@ -44,11 +44,15 @@ implementation:
 
 - Bit endianness and byte order are not yet supported.
 
-- No range checks for integers less than 64 bits.
-
 - ``byteswap()`` can only swap 1, 2, 4 and 8 bytes.
 
 See `cbitstruct`_ for its limitations.
+
+MicroPython
+===========
+
+The C implementation has been ported to `MicroPython`_. See
+`bitstruct-micropython`_ for more details.
 
 Example usage
 =============
@@ -238,3 +242,7 @@ Contributing
 .. _compiling: http://bitstruct.readthedocs.io/en/latest/#bitstruct.compile
 
 .. _cbitstruct: https://github.com/qchateau/cbitstruct
+
+.. _MicroPython: https://github.com/micropython/micropython
+
+.. _bitstruct-micropython: https://github.com/peterzuger/bitstruct-micropython
