@@ -77,7 +77,7 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(packed, b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
 
         # Too many values to pack.
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(TypeError) as cm:
             pack('b1t24', False)
 
         self.assertEqual(str(cm.exception),
@@ -187,14 +187,14 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(packed, 1000 * b'\x37')
 
         # Bad float size.
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             unpack('f33', b'\x00\x00\x00\x00\x00')
 
         self.assertEqual(str(cm.exception),
                          'expected float size of 16, 32, or 64 bits (got 33)')
 
         # Too many bits to unpack.
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             unpack('u9', b'\x00')
 
         self.assertEqual(str(cm.exception),
@@ -430,13 +430,13 @@ class BitStructTest(unittest.TestCase):
 
         """
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             pack('f31', 1.0)
 
         self.assertEqual(str(cm.exception),
                          'expected float size of 16, 32, or 64 bits (got 31)')
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             unpack('f33', 8 * b'\x00')
 
         self.assertEqual(str(cm.exception),
@@ -461,7 +461,7 @@ class BitStructTest(unittest.TestCase):
         ]
 
         for fmt, expected_error in formats:
-            with self.assertRaises(Error) as cm:
+            with self.assertRaises(ValueError) as cm:
                 bitstruct.compile(fmt)
 
             self.assertEqual(str(cm.exception), expected_error)
@@ -523,7 +523,7 @@ class BitStructTest(unittest.TestCase):
 
         packed = bytearray(2)
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             pack_into('u17', packed, 0, 1)
 
         self.assertEqual(str(cm.exception),
@@ -534,7 +534,7 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(packed, b'\xf1')
 
         # Too many values to pack.
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(TypeError) as cm:
             packed = bytearray(b'\x00')
             pack_into('b1t24', packed, 0, False)
 
@@ -549,7 +549,7 @@ class BitStructTest(unittest.TestCase):
         unpacked = unpack_from('u1u1s6u7u9', b'\x1f\x41\x0b\x00', 1)
         self.assertEqual(unpacked, (0, 0, -2, 65, 22))
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(ValueError) as cm:
             unpack_from('u1u1s6u7u9', b'\x1f\x41\x0b', 1)
 
         self.assertEqual(str(cm.exception),
@@ -578,7 +578,7 @@ class BitStructTest(unittest.TestCase):
 
             # Numbers out of range.
             for number in [minimum - 1, maximum + 1]:
-                with self.assertRaises(Error) as cm:
+                with self.assertRaises(OverflowError) as cm:
                     pack(fmt, number)
 
                 self.assertEqual(
@@ -677,18 +677,18 @@ class BitStructTest(unittest.TestCase):
         fmt = 'u1u1s6u7u9'
         names = ['foo', 'bar', 'fie', 'fum', 'fam']
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(KeyError) as cm:
             pack_dict(fmt, names, unpacked)
 
         self.assertEqual(str(cm.exception),
-                         "'fam' not found in data dictionary")
+                         "'fam'")
 
-        with self.assertRaises(Error) as cm:
+        with self.assertRaises(KeyError) as cm:
             data = bytearray(3)
             pack_into_dict(fmt, names, data, 0, unpacked)
 
         self.assertEqual(str(cm.exception),
-                         "'fam' not found in data dictionary")
+                         "'fam'")
 
     def test_compile_pack_unpack_formats(self):
         fmts = [

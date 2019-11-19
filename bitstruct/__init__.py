@@ -8,10 +8,6 @@ import binascii
 from .version import __version__
 
 
-class Error(Exception):
-    pass
-
-
 class _Info(object):
 
     def __init__(self, size, name=None):
@@ -31,7 +27,7 @@ class _SignedInteger(_Info):
         value = int(arg)
 
         if value < self.minimum or value > self.maximum:
-            raise Error(
+            raise OverflowError(
                 '"s{}" requires {} <= integer <= {} (got {})'.format(
                     self.size,
                     self.minimum,
@@ -64,7 +60,7 @@ class _UnsignedInteger(_Info):
         value = int(arg)
 
         if value < 0 or value > self.maximum:
-            raise Error(
+            raise OverflowError(
                 '"u{}" requires 0 <= integer <= {} (got {})'.format(
                     self.size,
                     self.maximum,
@@ -97,7 +93,7 @@ class _Float(_Info):
         elif self.size == 64:
             value = struct.pack('>d', value)
         else:
-            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
+            raise ValueError('expected float size of 16, 32, or 64 bits (got {})'.format(
                 self.size))
 
         return bin(int(b'01' + binascii.hexlify(value), 16))[3:]
@@ -112,7 +108,7 @@ class _Float(_Info):
         elif self.size == 64:
             value = struct.unpack('>d', packed)[0]
         else:
-            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
+            raise ValueError('expected float size of 16, 32, or 64 bits (got {})'.format(
                 self.size))
 
         return value
@@ -175,7 +171,7 @@ def _parse_format(fmt, names):
     parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(\s*)', fmt)
 
     if ''.join([''.join(info) for info in parsed_infos]) != fmt:
-        raise Error("bad format '{}'".format(fmt + byte_order))
+        raise ValueError("bad format '{}'".format(fmt + byte_order))
 
     # Use big endian as default and use the endianness of the previous
     # value if none is given for the current value.
@@ -191,7 +187,7 @@ def _parse_format(fmt, names):
         size = int(parsed_info[2])
 
         if size == 0:
-            raise Error("bad format '{}'".format(fmt + byte_order))
+            raise ValueError("bad format '{}'".format(fmt + byte_order))
 
         if names is None:
             name = i
@@ -221,7 +217,7 @@ def _parse_format(fmt, names):
         elif type_ == 'P':
             info = _OnePadding(size)
         else:
-            raise Error("bad char '{}' in format".format(type_))
+            raise ValueError("bad char '{}' in format".format(type_))
 
         info.endianness = endianness
 
@@ -295,7 +291,7 @@ class _CompiledFormat(object):
 
         # Sanity check.
         if self._number_of_bits_to_unpack > len(bits):
-            raise Error(
+            raise ValueError(
                 "unpack requires at least {} bits to unpack (got {})".format(
                     self._number_of_bits_to_unpack,
                     len(bits)))
@@ -347,7 +343,7 @@ class _CompiledFormat(object):
         bits += buf_bits[len(bits):]
 
         if len(bits) > len(buf_bits):
-            raise Error(
+            raise ValueError(
                 'pack_into requires a buffer of at least {} bits'.format(
                     len(bits)))
 
@@ -385,7 +381,7 @@ class CompiledFormat(_CompiledFormat):
 
         # Sanity check of the number of arguments.
         if len(args) < self._number_of_arguments:
-            raise Error(
+            raise TypeError(
                 "pack expected {} item(s) for packing (got {})".format(
                     self._number_of_arguments,
                     len(args)))
@@ -406,7 +402,7 @@ class CompiledFormat(_CompiledFormat):
 
         # Sanity check of the number of arguments.
         if len(args) < self._number_of_arguments:
-            raise Error(
+            raise TypeError(
                 "pack expected {} item(s) for packing (got {})".format(
                     self._number_of_arguments,
                     len(args)))
@@ -431,10 +427,7 @@ class CompiledFormatDict(_CompiledFormat):
 
         """
 
-        try:
-            return self.pack_any(data)
-        except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
+        return self.pack_any(data)
 
     def unpack(self, data):
         """See :func:`~bitstruct.unpack_dict()`.
@@ -448,10 +441,7 @@ class CompiledFormatDict(_CompiledFormat):
 
         """
 
-        try:
-            self.pack_into_any(buf, offset, data, **kwargs)
-        except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
+        self.pack_into_any(buf, offset, data, **kwargs)
 
     def unpack_from(self, data, offset=0):
         """See :func:`~bitstruct.unpack_from_dict()`.
