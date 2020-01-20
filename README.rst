@@ -12,7 +12,7 @@ struct module, but working on bits instead of primitive data types
 
 Project homepage: https://github.com/eerimoq/bitstruct
 
-Documentation: http://bitstruct.readthedocs.org/en/latest/
+Documentation: http://bitstruct.readthedocs.org
 
 Installation
 ============
