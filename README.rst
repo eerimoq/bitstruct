@@ -28,7 +28,7 @@ Parts of this package has been re-implemented in C for faster pack and
 unpack operations. There are two independent C implementations;
 `bitstruct.c`, which is part of this package, and the standalone
 package `cbitstruct`_. These implementations are only available in
-Python 3, and must be explicitly imported. By default the pure Python
+CPython 3, and must be explicitly imported. By default the pure Python
 implementation is used.
 
 To use `bitstruct.c`, do ``import bitstruct.c as bitstruct``.
