@@ -2,12 +2,22 @@ from __future__ import print_function
 import sys
 import timeit
 import unittest
+import platform
 
-if sys.version_info[0] < 3:
-    print('Skipping C extension tests in Python 2.')
-else:
+def is_cpython_3():
+    if platform.python_implementation() != 'CPython':
+        return False
+
+    if sys.version_info[0] < 3:
+        return False
+
+    return True
+
+if is_cpython_3():
     import bitstruct.c
     from bitstruct.c import *
+else:
+    print('Skipping C extension tests for non-CPython 3.')
 
 
 class CTest(unittest.TestCase):
@@ -17,7 +27,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         packed = pack('u1u1s6u7u9', 0, 0, -2, 65, 22)
@@ -93,7 +103,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         unpacked = unpack('u1u1s6u7u9', b'\x3e\x82\x16')
@@ -183,7 +193,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         packed = pack('u1u1s6u7u9', 0, 0, -2, 65, 22)
@@ -204,7 +214,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         size = calcsize('u1u1s6u7u9')
@@ -227,7 +237,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         cf = bitstruct.c.compile('u1u1s6u7u9')
@@ -241,9 +251,8 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
-
 
         res = b'\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a'
         ref = b'\x01\x03\x02\x04\x08\x07\x06\x05\x0a\x09'
@@ -262,7 +271,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         packed = bytearray(3)
@@ -326,7 +335,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         unpacked = unpack_from('u1u1s6u7u9', b'\x1f\x41\x0b\x00', 1)
@@ -349,7 +358,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         cf = bitstruct.c.compile('u2')
@@ -362,7 +371,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         cf = bitstruct.c.compile('u1')
@@ -377,7 +386,7 @@ class CTest(unittest.TestCase):
 
         """
 
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         with self.assertRaises(NotImplementedError):
@@ -403,7 +412,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(unpacked, b'123')
 
     def test_pack_unpack_dict(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         unpacked = {
@@ -421,7 +430,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(unpack_dict(fmt, names, packed), unpacked)
 
     def test_pack_into_unpack_from_dict(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         unpacked = {
@@ -442,7 +451,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(unpack_from_dict(fmt, names, packed), unpacked)
 
     def test_compiled_pack_into_unpack_from_dict(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         unpacked = {
@@ -464,7 +473,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(cf.unpack_from(packed), unpacked)
 
     def test_compile(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         cf = bitstruct.c.compile('u1u1s6u7u9')
@@ -476,7 +485,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(unpacked, (0, 0, -2, 65, 22))
 
     def test_compile_pack_unpack_formats(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         fmts = [
@@ -509,7 +518,7 @@ class CTest(unittest.TestCase):
             self.assertEqual(unpacked_2, decoded)
 
     def test_compile_formats(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         bitstruct.c.compile('p1u1')
@@ -519,7 +528,7 @@ class CTest(unittest.TestCase):
             bitstruct.c.compile()
 
     def test_pack_unpack_signed(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         datas = [
@@ -534,7 +543,7 @@ class CTest(unittest.TestCase):
             self.assertEqual(unpack(fmt, packed), (value, ))
 
     def test_pack_unpack_unsigned(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         datas = [
@@ -549,7 +558,7 @@ class CTest(unittest.TestCase):
             self.assertEqual(unpack(fmt, packed), (value, ))
 
     def test_various(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         with self.assertRaises(ValueError):
@@ -746,7 +755,7 @@ class CTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Names is not a list.')
 
     def test_whitespaces(self):
-        if sys.version_info[0] < 3:
+        if not is_cpython_3():
             return
 
         fmts = [

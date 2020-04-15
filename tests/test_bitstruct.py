@@ -105,8 +105,7 @@ class BitStructTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             pack('r5', 1.0)
 
-        self.assertEqual(str(cm.exception),
-                         "object of type 'float' has no len()")
+        self.assertIn("'float' has no", str(cm.exception))
 
         # Cannot encode argument as utf-8.
         with self.assertRaises(AttributeError) as cm:

@@ -1,6 +1,7 @@
 test:
 	python2 setup.py test
 	python3 setup.py test
+	pypy3 setup.py test
 	$(MAKE) test-sdist
 	codespell -d $$(git ls-files)
 

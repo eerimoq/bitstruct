@@ -3,6 +3,7 @@
 import sys
 import re
 import setuptools
+import platform
 from setuptools import find_packages
 
 
@@ -10,6 +11,16 @@ def find_version():
     return re.search(r"^__version__ = '(.*)'$",
                      open('bitstruct/version.py', 'r').read(),
                      re.MULTILINE).group(1)
+
+
+def is_cpython_3():
+    if platform.python_implementation() != 'CPython':
+        return False
+
+    if sys.version_info[0] < 3:
+        return False
+
+    return True
 
 
 def setup(ext_modules):
@@ -35,7 +46,7 @@ def setup(ext_modules):
         test_suite="tests")
 
 
-if sys.version_info[0] > 2:
+if is_cpython_3():
     try:
         setup([setuptools.Extension('bitstruct.c',
                                     sources=[
@@ -46,5 +57,5 @@ if sys.version_info[0] > 2:
         print('WARNING: Failed to build the C extension.')
         setup([])
 else:
-    print('INFO: C extension not implemented in Python 2.')
+    print('INFO: C extension only implemented in CPython 3.')
     setup([])
