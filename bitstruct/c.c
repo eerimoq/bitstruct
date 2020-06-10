@@ -49,7 +49,194 @@ struct compiled_format_dict_t {
     PyObject *names_p;
 };
 
+static void compiled_format_dealloc(struct compiled_format_t *self_p);
+
+static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
+                                        PyObject *args_p);
+
+static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
+                                          PyObject *args_p);
+
+static PyObject *m_compiled_format_pack_into(struct compiled_format_t *self_p,
+                                             PyObject *args_p,
+                                             PyObject *kwargs_p);
+
+static PyObject *m_compiled_format_unpack_from(struct compiled_format_t *self_p,
+                                               PyObject *args_p,
+                                               PyObject *kwargs_p);
+
+static PyObject *m_compiled_format_calcsize(struct compiled_format_t *self_p);
+
+static PyObject *m_compiled_format_copy(struct compiled_format_t *self_p);
+
+static PyObject *m_compiled_format_deepcopy(struct compiled_format_t *self_p,
+                                            PyObject *args_p);
+
+static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p);
+
+static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self_p,
+                                             PyObject *data_p);
+
+static PyObject *m_compiled_format_dict_unpack(
+    struct compiled_format_dict_t *self_p,
+    PyObject *data_p);
+
+static PyObject *m_compiled_format_dict_pack_into(
+    struct compiled_format_dict_t *self_p,
+    PyObject *args_p,
+    PyObject *kwargs_p);
+
+static PyObject *m_compiled_format_dict_unpack_from(
+    struct compiled_format_dict_t *self_p,
+    PyObject *args_p,
+    PyObject *kwargs_p);
+
+static PyObject *m_compiled_format_dict_calcsize(
+    struct compiled_format_dict_t *self_p);
+
+static PyObject *m_compiled_format_dict_copy(
+    struct compiled_format_dict_t *self_p);
+
+static PyObject *m_compiled_format_dict_deepcopy(
+    struct compiled_format_dict_t *self_p,
+    PyObject *args_p);
+
+PyDoc_STRVAR(pack___doc__,
+             "pack(fmt, *args)\n"
+             "--\n"
+             "\n");
+
+PyDoc_STRVAR(unpack___doc__,
+             "unpack(fmt, data)\n"
+             "--\n"
+             "\n");
+
+PyDoc_STRVAR(pack_into___doc__,
+             "pack_into(fmt, buf, offset, *args, **kwargs)\n"
+             "--\n"
+             "\n");
+
+PyDoc_STRVAR(unpack_from___doc__,
+             "unpack_from(fmt, data, offset=0)\n"
+             "--\n"
+             "\n");
+
+PyDoc_STRVAR(calcsize___doc__,
+             "calcsize(fmt)\n"
+             "--\n"
+             "\n");
+
 static PyObject *py_zero_p = NULL;
+
+static struct PyMethodDef compiled_format_methods[] = {
+    {
+        "pack",
+        (PyCFunction)m_compiled_format_pack,
+        METH_VARARGS,
+        pack___doc__
+    },
+    {
+        "unpack",
+        (PyCFunction)m_compiled_format_unpack,
+        METH_VARARGS,
+        unpack___doc__
+    },
+    {
+        "pack_into",
+        (PyCFunction)m_compiled_format_pack_into,
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into___doc__
+    },
+    {
+        "unpack_from",
+        (PyCFunction)m_compiled_format_unpack_from,
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from___doc__
+    },
+    {
+        "calcsize",
+        (PyCFunction)m_compiled_format_calcsize,
+        METH_NOARGS,
+        calcsize___doc__
+    },
+    {
+        "__copy__",
+        (PyCFunction)m_compiled_format_copy,
+        METH_NOARGS
+    },
+    {
+        "__deepcopy__",
+        (PyCFunction)m_compiled_format_deepcopy,
+        METH_VARARGS
+    },
+    { NULL }
+};
+
+static PyTypeObject compiled_format_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "bitstruct.c.CompiledFormat",
+    .tp_doc = NULL,
+    .tp_basicsize = sizeof(struct compiled_format_t),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_dealloc = (destructor)compiled_format_dealloc,
+    .tp_methods = compiled_format_methods,
+};
+
+static struct PyMethodDef compiled_format_dict_methods[] = {
+    {
+        "pack",
+        (PyCFunction)m_compiled_format_dict_pack,
+        METH_O,
+        pack___doc__
+    },
+    {
+        "unpack",
+        (PyCFunction)m_compiled_format_dict_unpack,
+        METH_O,
+        unpack___doc__
+    },
+    {
+        "pack_into",
+        (PyCFunction)m_compiled_format_dict_pack_into,
+        METH_VARARGS | METH_KEYWORDS,
+        pack_into___doc__
+    },
+    {
+        "unpack_from",
+        (PyCFunction)m_compiled_format_dict_unpack_from,
+        METH_VARARGS | METH_KEYWORDS,
+        unpack_from___doc__
+    },
+    {
+        "calcsize",
+        (PyCFunction)m_compiled_format_dict_calcsize,
+        METH_NOARGS,
+        calcsize___doc__
+    },
+    {
+        "__copy__",
+        (PyCFunction)m_compiled_format_dict_copy,
+        METH_NOARGS
+    },
+    {
+        "__deepcopy__",
+        (PyCFunction)m_compiled_format_dict_deepcopy,
+        METH_VARARGS
+    },
+    { NULL }
+};
+
+static PyTypeObject compiled_format_dict_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "bitstruct.c.CompiledFormatDict",
+    .tp_doc = NULL,
+    .tp_basicsize = sizeof(struct compiled_format_dict_t),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_dealloc = (destructor)compiled_format_dict_dealloc,
+    .tp_methods = compiled_format_dict_methods,
+};
 
 static bool is_names_list(PyObject *names_p)
 {
@@ -720,11 +907,6 @@ static PyObject *pack(struct info_t *info_p,
     return (pack_finalize(packed_p));
 }
 
-PyDoc_STRVAR(pack___doc__,
-             "pack(fmt, *args)\n"
-             "--\n"
-             "\n");
-
 static PyObject *m_pack(PyObject *module_p, PyObject *args_p)
 {
     Py_ssize_t number_of_args;
@@ -801,11 +983,6 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
 
     return (unpacked_p);
 }
-
-PyDoc_STRVAR(unpack___doc__,
-             "unpack(fmt, data)\n"
-             "--\n"
-             "\n");
 
 static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
 {
@@ -943,11 +1120,6 @@ static PyObject *pack_into(struct info_t *info_p,
     return (pack_into_finalize(&bounds));
 }
 
-PyDoc_STRVAR(pack_into___doc__,
-             "pack_into(fmt, buf, offset, *args, **kwargs)\n"
-             "--\n"
-             "\n");
-
 static PyObject *m_pack_into(PyObject *module_p,
                              PyObject *args_p,
                              PyObject *kwargs_p)
@@ -1001,11 +1173,6 @@ static PyObject *unpack_from(struct info_t *info_p,
 
     return (unpack(info_p, data_p, offset));
 }
-
-PyDoc_STRVAR(unpack_from___doc__,
-             "unpack_from(fmt, data, offset=0)\n"
-             "--\n"
-             "\n");
 
 static PyObject *m_unpack_from(PyObject *module_p,
                                PyObject *args_p,
@@ -1392,11 +1559,6 @@ static PyObject *calcsize(struct info_t *info_p)
     return (PyLong_FromLong(info_p->number_of_bits));
 }
 
-PyDoc_STRVAR(calcsize___doc__,
-             "calcsize(fmt)\n"
-             "--\n"
-             "\n");
-
 static PyObject *m_calcsize(PyObject *module_p, PyObject *format_p)
 {
     PyObject *size_p;
@@ -1633,50 +1795,40 @@ static PyObject *m_compiled_format_calcsize(struct compiled_format_t *self_p)
     return (calcsize(self_p->info_p));
 }
 
-static struct PyMethodDef compiled_format_methods[] = {
-    {
-        "pack",
-        (PyCFunction)m_compiled_format_pack,
-        METH_VARARGS,
-        pack___doc__
-    },
-    {
-        "unpack",
-        (PyCFunction)m_compiled_format_unpack,
-        METH_VARARGS,
-        unpack___doc__
-    },
-    {
-        "pack_into",
-        (PyCFunction)m_compiled_format_pack_into,
-        METH_VARARGS | METH_KEYWORDS,
-        pack_into___doc__
-    },
-    {
-        "unpack_from",
-        (PyCFunction)m_compiled_format_unpack_from,
-        METH_VARARGS | METH_KEYWORDS,
-        unpack_from___doc__
-    },
-    {
-        "calcsize",
-        (PyCFunction)m_compiled_format_calcsize,
-        METH_NOARGS,
-        calcsize___doc__
-    },
-    { NULL }
-};
+static PyObject *m_compiled_format_copy(struct compiled_format_t *self_p)
+{
+    struct compiled_format_t *new_p;
+    size_t info_size;
 
-static PyTypeObject compiled_format_type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "bitstruct.c.CompiledFormat",
-    .tp_doc = NULL,
-    .tp_basicsize = sizeof(struct compiled_format_t),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_dealloc = (destructor)compiled_format_dealloc,
-    .tp_methods = compiled_format_methods,
-};
+    new_p = (struct compiled_format_t *)compiled_format_type.tp_alloc(
+        &compiled_format_type,
+        0);
+
+    if (new_p == NULL) {
+        return (NULL);
+    }
+
+    info_size = sizeof(*self_p->info_p);
+    info_size += (sizeof(self_p->info_p->fields[0])
+                  * (self_p->info_p->number_of_fields - 1));
+
+    new_p->info_p = PyMem_RawMalloc(info_size);
+
+    if (new_p->info_p == NULL) {
+        /* ToDo: Free new_p. */
+        return (NULL);
+    }
+
+    memcpy(new_p->info_p, self_p->info_p, info_size);
+
+    return ((PyObject *)new_p);
+}
+
+static PyObject *m_compiled_format_deepcopy(struct compiled_format_t *self_p,
+                                            PyObject *args_p)
+{
+    return (m_compiled_format_copy(self_p));
+}
 
 static PyObject *compiled_format_dict_new(PyTypeObject *subtype_p,
                                           PyObject *format_p,
@@ -1794,50 +1946,42 @@ static PyObject *m_compiled_format_dict_calcsize(
     return (calcsize(self_p->info_p));
 }
 
-static struct PyMethodDef compiled_format_dict_methods[] = {
-    {
-        "pack",
-        (PyCFunction)m_compiled_format_dict_pack,
-        METH_O,
-        pack___doc__
-    },
-    {
-        "unpack",
-        (PyCFunction)m_compiled_format_dict_unpack,
-        METH_O,
-        unpack___doc__
-    },
-    {
-        "pack_into",
-        (PyCFunction)m_compiled_format_dict_pack_into,
-        METH_VARARGS | METH_KEYWORDS,
-        pack_into___doc__
-    },
-    {
-        "unpack_from",
-        (PyCFunction)m_compiled_format_dict_unpack_from,
-        METH_VARARGS | METH_KEYWORDS,
-        unpack_from___doc__
-    },
-    {
-        "calcsize",
-        (PyCFunction)m_compiled_format_dict_calcsize,
-        METH_NOARGS,
-        calcsize___doc__
-    },
-    { NULL }
-};
+static PyObject *m_compiled_format_dict_copy(struct compiled_format_dict_t *self_p)
+{
+    struct compiled_format_dict_t *new_p;
+    size_t info_size;
 
-static PyTypeObject compiled_format_dict_type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "bitstruct.c.CompiledFormatDict",
-    .tp_doc = NULL,
-    .tp_basicsize = sizeof(struct compiled_format_dict_t),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_dealloc = (destructor)compiled_format_dict_dealloc,
-    .tp_methods = compiled_format_dict_methods,
-};
+    new_p = (struct compiled_format_dict_t *)compiled_format_dict_type.tp_alloc(
+        &compiled_format_dict_type,
+        0);
+
+    if (new_p == NULL) {
+        return (NULL);
+    }
+
+    info_size = sizeof(*self_p->info_p);
+    info_size += (sizeof(self_p->info_p->fields[0])
+                  * (self_p->info_p->number_of_fields - 1));
+
+    new_p->info_p = PyMem_RawMalloc(info_size);
+
+    if (new_p->info_p == NULL) {
+        /* ToDo: Free new_p. */
+        return (NULL);
+    }
+
+    memcpy(new_p->info_p, self_p->info_p, info_size);
+    Py_INCREF(self_p->names_p);
+    new_p->names_p = self_p->names_p;
+
+    return ((PyObject *)new_p);
+}
+
+static PyObject *m_compiled_format_dict_deepcopy(struct compiled_format_dict_t *self_p,
+                                                 PyObject *args_p)
+{
+    return (m_compiled_format_dict_copy(self_p));
+}
 
 PyDoc_STRVAR(compile___doc__,
              "compile(fmt, names=None)\n"

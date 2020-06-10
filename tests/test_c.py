@@ -3,6 +3,8 @@ import sys
 import timeit
 import unittest
 import platform
+import copy
+
 
 def is_cpython_3():
     if platform.python_implementation() != 'CPython':
@@ -12,6 +14,7 @@ def is_cpython_3():
         return False
 
     return True
+
 
 if is_cpython_3():
     import bitstruct.c
@@ -765,6 +768,44 @@ class CTest(unittest.TestCase):
 
         for fmt in fmts:
             bitstruct.c.compile(fmt)
+
+    def test_copy(self):
+        if not is_cpython_3():
+            return
+
+        cf = bitstruct.c.compile('u1u1s6u7u9')
+
+        cf = copy.copy(cf)
+        packed = cf.pack(0, 0, -2, 65, 22)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+
+        cf = copy.deepcopy(cf)
+        packed = cf.pack(0, 0, -2, 65, 22)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+
+    def test_copy_dict(self):
+        if not is_cpython_3():
+            return
+
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        names = ['foo', 'bar', 'fie', 'fum', 'fam']
+        cf = bitstruct.c.compile('u1u1s6u7u9', names)
+
+        cf = copy.copy(cf)
+        packed = cf.pack(unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
+
+        cf = copy.deepcopy(cf)
+        packed = cf.pack(unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
 
 
 if __name__ == '__main__':
