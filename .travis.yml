@@ -17,6 +17,12 @@ before_install:
      sudo chown -Rv $USER:$GROUP ~/.cache/pip/wheels
    fi
 
+# Disable version pypy3
+jobs: 
+  exclude:
+    - arch: ppc64le
+      python: pypy3
+
 install:
   - pip install coveralls
   - pip install -r requirements.txt
