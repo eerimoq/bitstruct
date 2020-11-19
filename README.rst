@@ -209,8 +209,8 @@ Contributing
 
 #. Create a pull request.
 
-.. |buildstatus| image:: https://travis-ci.org/eerimoq/bitstruct.svg
-.. _buildstatus: https://travis-ci.org/eerimoq/bitstruct
+.. |buildstatus| image:: https://travis-ci.com/eerimoq/bitstruct.svg
+.. _buildstatus: https://travis-ci.com/eerimoq/bitstruct
 
 .. |appveyor| image:: https://img.shields.io/appveyor/ci/eerimoq/bitstruct/master.svg?label=AppVeyor
 .. _appveyor: https://ci.appveyor.com/project/eerimoq/bitstruct/history
