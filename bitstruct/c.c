@@ -1357,6 +1357,7 @@ static PyObject *unpack_dict(struct info_t *info_p,
             PyDict_SetItem(unpacked_p,
                            PyList_GET_ITEM(names_p, produced_args),
                            value_p);
+            Py_DECREF(value_p);
             produced_args++;
         }
     }
