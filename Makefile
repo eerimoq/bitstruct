@@ -16,5 +16,5 @@ test-sdist:
 	python setup.py test
 
 release-to-pypi:
-	python setup.py sdist
+	python3 setup.py sdist
 	twine upload dist/*
