@@ -1776,11 +1776,7 @@ static PyObject *compiled_format_new(PyTypeObject *type_p,
                                      PyObject *args_p,
                                      PyObject *kwargs_p)
 {
-    struct compiled_format_t *self_p;
-
-    self_p = (struct compiled_format_t *)type_p->tp_alloc(type_p, 0);
-
-    return ((PyObject *)self_p);
+    return (type_p->tp_alloc(type_p, 0));
 }
 
 static int compiled_format_init(struct compiled_format_t *self_p,
@@ -1819,6 +1815,7 @@ static int compiled_format_init_inner(struct compiled_format_t *self_p,
 static void compiled_format_dealloc(struct compiled_format_t *self_p)
 {
     PyMem_RawFree(self_p->info_p);
+    Py_DECREF(self_p->format_p);
 }
 
 static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
@@ -1907,9 +1904,10 @@ static PyObject *m_compiled_format_copy(struct compiled_format_t *self_p)
     struct compiled_format_t *new_p;
     size_t info_size;
 
-    new_p = (struct compiled_format_t *)compiled_format_type.tp_alloc(
+    new_p = (struct compiled_format_t *)compiled_format_new(
         &compiled_format_type,
-        0);
+        NULL,
+        NULL);
 
     if (new_p == NULL) {
         return (NULL);
@@ -1927,6 +1925,8 @@ static PyObject *m_compiled_format_copy(struct compiled_format_t *self_p)
     }
 
     memcpy(new_p->info_p, self_p->info_p, info_size);
+    Py_INCREF(self_p->format_p);
+    new_p->format_p = self_p->format_p;
 
     return ((PyObject *)new_p);
 }
@@ -2020,11 +2020,7 @@ static PyObject *compiled_format_dict_new(PyTypeObject *type_p,
                                           PyObject *args_p,
                                           PyObject *kwargs_p)
 {
-    struct compiled_format_dict_t *self_p;
-
-    self_p = (struct compiled_format_dict_t *)type_p->tp_alloc(type_p, 0);
-
-    return ((PyObject *)self_p);
+    return (type_p->tp_alloc(type_p, 0));
 }
 
 static int compiled_format_dict_init(struct compiled_format_dict_t *self_p,
@@ -2072,6 +2068,7 @@ static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p)
 {
     PyMem_RawFree(self_p->info_p);
     Py_DECREF(self_p->names_p);
+    Py_DECREF(self_p->format_p);
 }
 
 static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self_p,
@@ -2162,9 +2159,10 @@ static PyObject *m_compiled_format_dict_copy(struct compiled_format_dict_t *self
     struct compiled_format_dict_t *new_p;
     size_t info_size;
 
-    new_p = (struct compiled_format_dict_t *)compiled_format_dict_type.tp_alloc(
+    new_p = (struct compiled_format_dict_t *)compiled_format_dict_new(
         &compiled_format_dict_type,
-        0);
+        NULL,
+        NULL);
 
     if (new_p == NULL) {
         return (NULL);
@@ -2184,6 +2182,8 @@ static PyObject *m_compiled_format_dict_copy(struct compiled_format_dict_t *self
     memcpy(new_p->info_p, self_p->info_p, info_size);
     Py_INCREF(self_p->names_p);
     new_p->names_p = self_p->names_p;
+    Py_INCREF(self_p->format_p);
+    new_p->format_p = self_p->format_p;
 
     return ((PyObject *)new_p);
 }
