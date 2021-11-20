@@ -1,6 +1,7 @@
 from __future__ import print_function
 import sys
 import timeit
+import pickle
 import unittest
 import platform
 import copy
@@ -803,6 +804,49 @@ class CTest(unittest.TestCase):
         self.assertEqual(cf.unpack(packed), unpacked)
 
         cf = copy.deepcopy(cf)
+        packed = cf.pack(unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
+
+    def test_pickle(self):
+        if not is_cpython_3():
+            return
+
+        unpacked = (0, 0, -2, 65, 22)
+        cf = bitstruct.c.compile('u1u1s6u7u9')
+
+        cf = pickle.loads(pickle.dumps(cf))
+        packed = cf.pack(*unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
+
+        # Dump and load once more.
+        cf = pickle.loads(pickle.dumps(cf))
+        packed = cf.pack(*unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
+
+    def test_pickle_dict(self):
+        if not is_cpython_3():
+            return
+
+        unpacked = {
+            'foo': 0,
+            'bar': 0,
+            'fie': -2,
+            'fum': 65,
+            'fam': 22
+        }
+        names = ['foo', 'bar', 'fie', 'fum', 'fam']
+        cf = bitstruct.c.compile('u1u1s6u7u9', names)
+
+        cf = pickle.loads(pickle.dumps(cf))
+        packed = cf.pack(unpacked)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+        self.assertEqual(cf.unpack(packed), unpacked)
+
+        # Dump and load once more.
+        cf = pickle.loads(pickle.dumps(cf))
         packed = cf.pack(unpacked)
         self.assertEqual(packed, b'\x3e\x82\x16')
         self.assertEqual(cf.unpack(packed), unpacked)

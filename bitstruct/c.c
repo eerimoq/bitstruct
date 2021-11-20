@@ -41,13 +41,29 @@ struct info_t {
 struct compiled_format_t {
     PyObject_HEAD
     struct info_t *info_p;
+    PyObject *format_p;
 };
 
 struct compiled_format_dict_t {
     PyObject_HEAD
     struct info_t *info_p;
+    PyObject *format_p;
     PyObject *names_p;
 };
+
+static const char* pickle_version_key = "_pickle_version";
+static int pickle_version = 1;
+
+static PyObject *compiled_format_new(PyTypeObject *type_p,
+                                     PyObject *args_p,
+                                     PyObject *kwargs_p);
+
+static int compiled_format_init(struct compiled_format_t *self_p,
+                                PyObject *args_p,
+                                PyObject *kwargs_p);
+
+static int compiled_format_init_inner(struct compiled_format_t *self_p,
+                                      PyObject *format_p);
 
 static void compiled_format_dealloc(struct compiled_format_t *self_p);
 
@@ -71,6 +87,24 @@ static PyObject *m_compiled_format_copy(struct compiled_format_t *self_p);
 
 static PyObject *m_compiled_format_deepcopy(struct compiled_format_t *self_p,
                                             PyObject *args_p);
+
+static PyObject *m_compiled_format_getstate(struct compiled_format_t *self_p,
+                                            PyObject *args_p);
+
+static PyObject *m_compiled_format_setstate(struct compiled_format_t *self_p,
+                                            PyObject *args_p);
+
+static PyObject *compiled_format_dict_new(PyTypeObject *type_p,
+                                          PyObject *args_p,
+                                          PyObject *kwargs_p);
+
+static int compiled_format_dict_init(struct compiled_format_dict_t *self_p,
+                                     PyObject *args_p,
+                                     PyObject *kwargs_p);
+
+static int compiled_format_dict_init_inner(struct compiled_format_dict_t *self_p,
+                                           PyObject *format_p,
+                                           PyObject *names_p);
 
 static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p);
 
@@ -100,6 +134,12 @@ static PyObject *m_compiled_format_dict_copy(
 static PyObject *m_compiled_format_dict_deepcopy(
     struct compiled_format_dict_t *self_p,
     PyObject *args_p);
+
+static PyObject *m_compiled_format_dict_getstate(struct compiled_format_dict_t *self_p,
+                                                 PyObject *args_p);
+
+static PyObject *m_compiled_format_dict_setstate(struct compiled_format_dict_t *self_p,
+                                                 PyObject *args_p);
 
 PyDoc_STRVAR(pack___doc__,
              "pack(fmt, *args)\n"
@@ -169,6 +209,16 @@ static struct PyMethodDef compiled_format_methods[] = {
         (PyCFunction)m_compiled_format_deepcopy,
         METH_VARARGS
     },
+    {
+        "__getstate__",
+        (PyCFunction)m_compiled_format_getstate,
+        METH_NOARGS
+    },
+    {
+        "__setstate__",
+        (PyCFunction)m_compiled_format_setstate,
+        METH_O
+    },
     { NULL }
 };
 
@@ -179,6 +229,8 @@ static PyTypeObject compiled_format_type = {
     .tp_basicsize = sizeof(struct compiled_format_t),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = compiled_format_new,
+    .tp_init = (initproc)compiled_format_init,
     .tp_dealloc = (destructor)compiled_format_dealloc,
     .tp_methods = compiled_format_methods,
 };
@@ -224,6 +276,16 @@ static struct PyMethodDef compiled_format_dict_methods[] = {
         (PyCFunction)m_compiled_format_dict_deepcopy,
         METH_VARARGS
     },
+    {
+        "__getstate__",
+        (PyCFunction)m_compiled_format_dict_getstate,
+        METH_NOARGS
+    },
+    {
+        "__setstate__",
+        (PyCFunction)m_compiled_format_dict_setstate,
+        METH_O
+    },
     { NULL }
 };
 
@@ -234,6 +296,8 @@ static PyTypeObject compiled_format_dict_type = {
     .tp_basicsize = sizeof(struct compiled_format_dict_t),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = compiled_format_dict_new,
+    .tp_init = (initproc)compiled_format_dict_init,
     .tp_dealloc = (destructor)compiled_format_dict_dealloc,
     .tp_methods = compiled_format_dict_methods,
 };
@@ -1087,9 +1151,7 @@ static PyObject *pack_into_finalize(struct bitstream_writer_bounds_t *bounds_p)
         return (NULL);
     }
 
-    Py_INCREF(Py_None);
-
-    return (Py_None);
+    Py_RETURN_NONE;
 }
 
 static PyObject *pack_into(struct info_t *info_p,
@@ -1691,23 +1753,67 @@ static PyObject *m_byteswap(PyObject *module_p, PyObject *args_p)
     return (NULL);
 }
 
-static PyObject *compiled_format_new(PyTypeObject *subtype_p,
-                                     PyObject *format_p)
+static PyObject *compiled_format_create(PyTypeObject *type_p,
+                                        PyObject *format_p)
+{
+    PyObject *self_p;
+
+    self_p = compiled_format_new(type_p, NULL, NULL);
+
+    if (self_p == NULL) {
+        return (NULL);
+    }
+
+    if (compiled_format_init_inner((struct compiled_format_t *)self_p,
+                                   format_p) != 0) {
+        return (NULL);
+    }
+
+    return (self_p);
+}
+
+static PyObject *compiled_format_new(PyTypeObject *type_p,
+                                     PyObject *args_p,
+                                     PyObject *kwargs_p)
 {
     struct compiled_format_t *self_p;
 
-    self_p = (struct compiled_format_t *)subtype_p->tp_alloc(subtype_p, 0);
-
-    if (self_p != NULL) {
-        self_p->info_p = parse_format(format_p);
-
-        if (self_p->info_p == NULL) {
-            PyObject_Free(self_p);
-            self_p = NULL;
-        }
-    }
+    self_p = (struct compiled_format_t *)type_p->tp_alloc(type_p, 0);
 
     return ((PyObject *)self_p);
+}
+
+static int compiled_format_init(struct compiled_format_t *self_p,
+                                PyObject *args_p,
+                                PyObject *kwargs_p)
+{
+    int res;
+    PyObject *format_p;
+
+    res = PyArg_ParseTuple(args_p, "O", &format_p);
+
+    if (res == 0) {
+        return (-1);
+    }
+
+    return (compiled_format_init_inner(self_p, format_p));
+}
+
+static int compiled_format_init_inner(struct compiled_format_t *self_p,
+                                      PyObject *format_p)
+{
+    self_p->info_p = parse_format(format_p);
+
+    if (self_p->info_p == NULL) {
+        PyObject_Free(self_p);
+
+        return (-1);
+    }
+
+    Py_INCREF(format_p);
+    self_p->format_p = format_p;
+
+    return (0);
 }
 
 static void compiled_format_dealloc(struct compiled_format_t *self_p)
@@ -1831,31 +1937,135 @@ static PyObject *m_compiled_format_deepcopy(struct compiled_format_t *self_p,
     return (m_compiled_format_copy(self_p));
 }
 
-static PyObject *compiled_format_dict_new(PyTypeObject *subtype_p,
-                                          PyObject *format_p,
-                                          PyObject *names_p)
+static PyObject *m_compiled_format_getstate(struct compiled_format_t *self_p,
+                                            PyObject *args_p)
 {
-    struct compiled_format_dict_t *self_p;
+    return (Py_BuildValue("{sOsi}",
+                          "format",
+                          self_p->format_p,
+                          pickle_version_key,
+                          pickle_version));
+}
 
-    if (!is_names_list(names_p)) {
+static PyObject *m_compiled_format_setstate(struct compiled_format_t *self_p,
+                                            PyObject *state_p)
+{
+    PyObject *version_p;
+    int version;
+    PyObject *format_p;
+
+    if (!PyDict_CheckExact(state_p)) {
+        PyErr_SetString(PyExc_ValueError, "Pickled object is not a dict.");
+
         return (NULL);
     }
 
-    self_p = (struct compiled_format_dict_t *)subtype_p->tp_alloc(subtype_p, 0);
+    version_p = PyDict_GetItemString(state_p, pickle_version_key);
 
-    if (self_p != NULL) {
-        self_p->info_p = parse_format(format_p);
+    if (version_p == NULL) {
+        PyErr_Format(PyExc_KeyError,
+                     "No \"%s\" in pickled dict.",
+                     pickle_version_key);
 
-        if (self_p->info_p == NULL) {
-            PyObject_Free(self_p);
-            self_p = NULL;
-        } else {
-            Py_INCREF(names_p);
-            self_p->names_p = names_p;
-        }
+        return (NULL);
     }
 
+    version = (int)PyLong_AsLong(version_p);
+
+    if (version != pickle_version) {
+        PyErr_Format(PyExc_ValueError,
+                     "Pickle version mismatch. Got version %d but expected version %d.",
+                     version, pickle_version);
+
+        return (NULL);
+    }
+
+    format_p = PyDict_GetItemString(state_p, "format");
+
+    if (format_p == NULL) {
+        PyErr_SetString(PyExc_KeyError, "No \"format\" in pickled dict.");
+
+        return (NULL);
+    }
+
+    if (compiled_format_init_inner(self_p, format_p) != 0) {
+        return (NULL);
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *compiled_format_dict_create(PyTypeObject *type_p,
+                                             PyObject *format_p,
+                                             PyObject *names_p)
+{
+    PyObject *self_p;
+
+    self_p = compiled_format_dict_new(type_p, NULL, NULL);
+
+    if (self_p == NULL) {
+        return (NULL);
+    }
+
+    if (compiled_format_dict_init_inner((struct compiled_format_dict_t *)self_p,
+                                        format_p,
+                                        names_p) != 0) {
+        return (NULL);
+    }
+
+    return (self_p);
+}
+
+static PyObject *compiled_format_dict_new(PyTypeObject *type_p,
+                                          PyObject *args_p,
+                                          PyObject *kwargs_p)
+{
+    struct compiled_format_dict_t *self_p;
+
+    self_p = (struct compiled_format_dict_t *)type_p->tp_alloc(type_p, 0);
+
     return ((PyObject *)self_p);
+}
+
+static int compiled_format_dict_init(struct compiled_format_dict_t *self_p,
+                                     PyObject *args_p,
+                                     PyObject *kwargs_p)
+{
+    int res;
+    PyObject *format_p;
+    PyObject *names_p;
+
+    res = PyArg_ParseTuple(args_p, "OO", &format_p, &names_p);
+
+    if (res == 0) {
+        return (-1);
+    }
+
+    return (compiled_format_dict_init_inner(self_p, format_p, names_p));
+}
+
+static int compiled_format_dict_init_inner(struct compiled_format_dict_t *self_p,
+                                           PyObject *format_p,
+                                           PyObject *names_p)
+{
+    if (!is_names_list(names_p)) {
+        return (-1);
+    }
+
+    self_p->info_p = parse_format(format_p);
+
+    if (self_p->info_p == NULL) {
+        PyObject_Free(self_p);
+
+        return (-1);
+    }
+
+    Py_INCREF(format_p);
+    self_p->format_p = format_p;
+    Py_INCREF(names_p);
+    self_p->names_p = names_p;
+
+    return (0);
 }
 
 static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p)
@@ -1989,6 +2199,75 @@ PyDoc_STRVAR(compile___doc__,
              "--\n"
              "\n");
 
+static PyObject *m_compiled_format_dict_getstate(struct compiled_format_dict_t *self_p,
+                                                 PyObject *args_p)
+{
+    return (Py_BuildValue("{sOsOsi}",
+                          "format",
+                          self_p->format_p,
+                          "names",
+                          self_p->names_p,
+                          pickle_version_key,
+                          pickle_version));
+}
+
+static PyObject *m_compiled_format_dict_setstate(struct compiled_format_dict_t *self_p,
+                                                 PyObject *state_p)
+{
+    PyObject *version_p;
+    int version;
+    PyObject *format_p;
+    PyObject *names_p;
+
+    if (!PyDict_CheckExact(state_p)) {
+        PyErr_SetString(PyExc_ValueError, "Pickled object is not a dict.");
+
+        return (NULL);
+    }
+
+    version_p = PyDict_GetItemString(state_p, pickle_version_key);
+
+    if (version_p == NULL) {
+        PyErr_Format(PyExc_KeyError,
+                     "No \"%s\" in pickled dict.",
+                     pickle_version_key);
+
+        return (NULL);
+    }
+
+    version = (int)PyLong_AsLong(version_p);
+
+    if (version != pickle_version) {
+        PyErr_Format(PyExc_ValueError,
+                     "Pickle version mismatch. Got version %d but expected version %d.",
+                     version, pickle_version);
+
+        return (NULL);
+    }
+
+    format_p = PyDict_GetItemString(state_p, "format");
+
+    if (format_p == NULL) {
+        PyErr_SetString(PyExc_KeyError, "No \"format\" in pickled dict.");
+
+        return (NULL);
+    }
+
+    names_p = PyDict_GetItemString(state_p, "names");
+
+    if (names_p == NULL) {
+        PyErr_SetString(PyExc_KeyError, "No \"names\" in pickled dict.");
+
+        return (NULL);
+    }
+
+    if (compiled_format_dict_init_inner(self_p, format_p, names_p) != 0) {
+        return (NULL);
+    }
+
+    Py_RETURN_NONE;
+}
+
 static PyObject *m_compile(PyObject *module_p,
                            PyObject *args_p,
                            PyObject *kwargs_p)
@@ -2015,11 +2294,11 @@ static PyObject *m_compile(PyObject *module_p,
     }
 
     if (names_p == Py_None) {
-        return (compiled_format_new(&compiled_format_type, format_p));
+        return (compiled_format_create(&compiled_format_type, format_p));
     } else {
-        return (compiled_format_dict_new(&compiled_format_dict_type,
-                                         format_p,
-                                         names_p));
+        return (compiled_format_dict_create(&compiled_format_dict_type,
+                                            format_p,
+                                            names_p));
     }
 }
 
@@ -2105,6 +2384,14 @@ PyMODINIT_FUNC PyInit_c(void)
 {
     PyObject *module_p;
 
+    if (PyType_Ready(&compiled_format_type) < 0) {
+        return (NULL);
+    }
+
+    if (PyType_Ready(&compiled_format_dict_type) < 0) {
+        return (NULL);
+    }
+
     py_zero_p = PyLong_FromLong(0);
     module_p = PyModule_Create(&module);
 
@@ -2112,11 +2399,23 @@ PyMODINIT_FUNC PyInit_c(void)
         return (NULL);
     }
 
-    if (PyType_Ready(&compiled_format_type) < 0) {
+    Py_INCREF(&compiled_format_type);
+
+    if (PyModule_AddObject(module_p,
+                           "CompiledFormat",
+                           (PyObject *)&compiled_format_type) < 0) {
+        Py_DECREF(&compiled_format_type);
+        Py_DECREF(module_p);
+
         return (NULL);
     }
 
-    if (PyType_Ready(&compiled_format_dict_type) < 0) {
+    if (PyModule_AddObject(module_p,
+                           "CompiledFormatDict",
+                           (PyObject *)&compiled_format_dict_type) < 0) {
+        Py_DECREF(&compiled_format_dict_type);
+        Py_DECREF(module_p);
+
         return (NULL);
     }
 
