@@ -1,8 +1,3 @@
-|buildstatus|_
-|appveyor|_
-|coverage|_
-|codecov|_
-
 About
 =====
 
@@ -208,18 +203,6 @@ Contributing
       make test
 
 #. Create a pull request.
-
-.. |buildstatus| image:: https://travis-ci.com/eerimoq/bitstruct.svg
-.. _buildstatus: https://travis-ci.com/eerimoq/bitstruct
-
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/eerimoq/bitstruct/master.svg?label=AppVeyor
-.. _appveyor: https://ci.appveyor.com/project/eerimoq/bitstruct/history
-
-.. |coverage| image:: https://coveralls.io/repos/github/eerimoq/bitstruct/badge.svg?branch=master
-.. _coverage: https://coveralls.io/github/eerimoq/bitstruct
-
-.. |codecov| image:: https://codecov.io/gh/eerimoq/bitstruct/branch/master/graph/badge.svg
-.. _codecov: https://codecov.io/gh/eerimoq/bitstruct
 
 .. _packing: http://bitstruct.readthedocs.io/en/latest/#bitstruct.pack
 
