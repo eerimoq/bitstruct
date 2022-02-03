@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-#define BITSTREAM_VERSION "0.5.1"
+#define BITSTREAM_VERSION "0.8.0"
 
 struct bitstream_writer_t {
     uint8_t *buf_p;
@@ -163,5 +163,8 @@ uint64_t bitstream_reader_read_u64_bits(struct bitstream_reader_t *self_p,
 /* Move read position. */
 void bitstream_reader_seek(struct bitstream_reader_t *self_p,
                            int offset);
+
+/* Get read position. */
+int bitstream_reader_tell(struct bitstream_reader_t *self_p);
 
 #endif

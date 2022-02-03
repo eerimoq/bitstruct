@@ -593,3 +593,8 @@ void bitstream_reader_seek(struct bitstream_reader_t *self_p,
     self_p->byte_offset = (offset / 8);
     self_p->bit_offset = (offset % 8);
 }
+
+int bitstream_reader_tell(struct bitstream_reader_t *self_p)
+{
+    return ((8 * self_p->byte_offset) + self_p->bit_offset);
+}
