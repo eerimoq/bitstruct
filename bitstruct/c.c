@@ -403,9 +403,15 @@ static void pack_float_16(struct bitstream_writer_t *self_p,
 {
     uint8_t buf[2];
 
+#if PY_VERSION_HEX >= 0x030B00A7
+    PyFloat_Pack2(PyFloat_AsDouble(value_p),
+                  (char*)&buf[0],
+                  PY_BIG_ENDIAN);
+#else
     _PyFloat_Pack2(PyFloat_AsDouble(value_p),
                    &buf[0],
                    PY_BIG_ENDIAN);
+#endif
     bitstream_writer_write_bytes(self_p, &buf[0], sizeof(buf));
 }
 
@@ -416,7 +422,11 @@ static PyObject *unpack_float_16(struct bitstream_reader_t *self_p,
     double value;
 
     bitstream_reader_read_bytes(self_p, &buf[0], sizeof(buf));
+#if PY_VERSION_HEX >= 0x030B00A7
+    value = PyFloat_Unpack2((const char*)&buf[0], PY_BIG_ENDIAN);
+#else
     value = _PyFloat_Unpack2(&buf[0], PY_BIG_ENDIAN);
+#endif
 
     return (PyFloat_FromDouble(value));
 }
