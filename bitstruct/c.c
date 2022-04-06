@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include "bitstream.h"
 
+#include <stdio.h>
+
 struct field_info_t;
 
 typedef void (*pack_field_t)(struct bitstream_writer_t *self_p,
@@ -71,7 +73,8 @@ static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
                                         PyObject *args_p);
 
 static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
-                                          PyObject *args_p);
+                                          PyObject *args_p,
+                                          PyObject *kwargs_p);
 
 static PyObject *m_compiled_format_pack_into(struct compiled_format_t *self_p,
                                              PyObject *args_p,
@@ -113,7 +116,8 @@ static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self
 
 static PyObject *m_compiled_format_dict_unpack(
     struct compiled_format_dict_t *self_p,
-    PyObject *data_p);
+    PyObject *args_p,
+    PyObject *kwargs_p);
 
 static PyObject *m_compiled_format_dict_pack_into(
     struct compiled_format_dict_t *self_p,
@@ -145,9 +149,17 @@ PyDoc_STRVAR(pack___doc__,
              "pack(fmt, *args)\n"
              "--\n"
              "\n");
+PyDoc_STRVAR(compiled_format_pack___doc__,
+             "pack(*args)\n"
+             "--\n"
+             "\n");
 
 PyDoc_STRVAR(unpack___doc__,
-             "unpack(fmt, data)\n"
+             "unpack(fmt, data, allow_truncated=False)\n"
+             "--\n"
+             "\n");
+PyDoc_STRVAR(compiled_format_unpack___doc__,
+             "unpack(data, allow_truncated=False)\n"
              "--\n"
              "\n");
 
@@ -155,14 +167,26 @@ PyDoc_STRVAR(pack_into___doc__,
              "pack_into(fmt, buf, offset, *args, **kwargs)\n"
              "--\n"
              "\n");
+PyDoc_STRVAR(compiled_format_pack_into___doc__,
+             "pack_into(buf, offset, *args, **kwargs)\n"
+             "--\n"
+             "\n");
 
 PyDoc_STRVAR(unpack_from___doc__,
-             "unpack_from(fmt, data, offset=0)\n"
+             "unpack_from(fmt, data, offset=0, allow_truncated=False)\n"
+             "--\n"
+             "\n");
+PyDoc_STRVAR(compiled_format_unpack_from___doc__,
+             "unpack_from(data, offset=0, allow_truncated=False)\n"
              "--\n"
              "\n");
 
 PyDoc_STRVAR(calcsize___doc__,
              "calcsize(fmt)\n"
+             "--\n"
+             "\n");
+PyDoc_STRVAR(compiled_format_calcsize___doc__,
+             "calcsize()\n"
              "--\n"
              "\n");
 
@@ -173,31 +197,31 @@ static struct PyMethodDef compiled_format_methods[] = {
         "pack",
         (PyCFunction)m_compiled_format_pack,
         METH_VARARGS,
-        pack___doc__
+        compiled_format_pack___doc__
     },
     {
         "unpack",
         (PyCFunction)m_compiled_format_unpack,
-        METH_VARARGS,
-        unpack___doc__
+        METH_VARARGS | METH_KEYWORDS,
+        compiled_format_unpack___doc__
     },
     {
         "pack_into",
         (PyCFunction)m_compiled_format_pack_into,
         METH_VARARGS | METH_KEYWORDS,
-        pack_into___doc__
+        compiled_format_pack_into___doc__
     },
     {
         "unpack_from",
         (PyCFunction)m_compiled_format_unpack_from,
         METH_VARARGS | METH_KEYWORDS,
-        unpack_from___doc__
+        compiled_format_unpack_from___doc__
     },
     {
         "calcsize",
         (PyCFunction)m_compiled_format_calcsize,
         METH_NOARGS,
-        calcsize___doc__
+        compiled_format_calcsize___doc__
     },
     {
         "__copy__",
@@ -245,7 +269,7 @@ static struct PyMethodDef compiled_format_dict_methods[] = {
     {
         "unpack",
         (PyCFunction)m_compiled_format_dict_unpack,
-        METH_O,
+        METH_VARARGS | METH_KEYWORDS,
         unpack___doc__
     },
     {
@@ -1007,33 +1031,56 @@ static PyObject *m_pack(PyObject *module_p, PyObject *args_p)
     return (packed_p);
 }
 
-static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
+static PyObject *unpack(struct info_t *info_p,
+                        PyObject *data_p,
+                        long offset,
+                        PyObject *allow_truncated_p)
 {
     struct bitstream_reader_t reader;
     PyObject *unpacked_p;
     PyObject *value_p;
     char *packed_p;
     int i;
+    int tmp;
     int produced_args;
     Py_ssize_t size;
     int res;
-
-    unpacked_p = PyTuple_New(info_p->number_of_non_padding_fields);
-
-    if (unpacked_p == NULL) {
-        return (NULL);
-    }
+    int allow_truncated;
+    int num_result_fields;
 
     res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
 
     if (res == -1) {
-        goto out1;
+        return (NULL);
     }
 
-    if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
-        PyErr_SetString(PyExc_ValueError, "Short data.");
+    allow_truncated = PyObject_IsTrue(allow_truncated_p);
 
-        goto out1;
+    if (allow_truncated) {
+        num_result_fields = 0;
+        tmp = 0;
+        for (i = 0; i < info_p->number_of_fields; i++) {
+            if (size*8 < tmp + info_p->fields[i].number_of_bits)
+                break;
+
+            tmp += info_p->fields[i].number_of_bits;
+            ++num_result_fields;
+        }
+    }
+    else {
+        num_result_fields = info_p->number_of_non_padding_fields;
+
+        if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
+          PyErr_SetString(PyExc_ValueError, "Short data.");
+
+          return (NULL);
+        }
+    }
+
+    unpacked_p = PyTuple_New(num_result_fields);
+
+    if (unpacked_p == NULL) {
+        return (NULL);
     }
 
     bitstream_reader_init(&reader, (uint8_t *)packed_p);
@@ -1041,6 +1088,9 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
+        if (size*8 < reader.bit_offset + info_p->fields[i].number_of_bits)
+            break;
+
         value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
 
         if (value_p != NULL) {
@@ -1049,24 +1099,42 @@ static PyObject *unpack(struct info_t *info_p, PyObject *data_p, long offset)
         }
     }
 
+    /*
  out1:
     if (PyErr_Occurred() != NULL) {
         Py_DECREF(unpacked_p);
         unpacked_p = NULL;
     }
+    */
 
     return (unpacked_p);
 }
 
-static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
+static PyObject *m_unpack(PyObject *module_p,
+                          PyObject *args_p,
+                          PyObject *kwargs_p)
 {
     PyObject *format_p;
     PyObject *data_p;
     PyObject *unpacked_p;
+    PyObject *allow_truncated_p;
     struct info_t *info_p;
     int res;
+    static char *keywords[] = {
+        "fmt",
+        "data",
+        "allow_truncated",
+        NULL
+    };
 
-    res = PyArg_ParseTuple(args_p, "OO", &format_p, &data_p);
+    allow_truncated_p = py_zero_p;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OO|O",
+                                      &keywords[0],
+                                      &format_p,
+                                      &data_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
@@ -1078,7 +1146,7 @@ static PyObject *m_unpack(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
-    unpacked_p = unpack(info_p, data_p, 0);
+    unpacked_p = unpack(info_p, data_p, 0, allow_truncated_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -1233,7 +1301,8 @@ static PyObject *m_pack_into(PyObject *module_p,
 
 static PyObject *unpack_from(struct info_t *info_p,
                              PyObject *data_p,
-                             PyObject *offset_p)
+                             PyObject *offset_p,
+                             PyObject *allow_truncated_p)
 {
     long offset;
 
@@ -1243,7 +1312,7 @@ static PyObject *unpack_from(struct info_t *info_p,
         return (NULL);
     }
 
-    return (unpack(info_p, data_p, offset));
+    return (unpack(info_p, data_p, offset, allow_truncated_p));
 }
 
 static PyObject *m_unpack_from(PyObject *module_p,
@@ -1254,23 +1323,27 @@ static PyObject *m_unpack_from(PyObject *module_p,
     PyObject *data_p;
     PyObject *offset_p;
     PyObject *unpacked_p;
+    PyObject *allow_truncated_p;
     struct info_t *info_p;
     int res;
     static char *keywords[] = {
         "fmt",
         "data",
         "offset",
+        "allow_truncated",
         NULL
     };
 
     offset_p = py_zero_p;
+    allow_truncated_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
-                                      "OO|O",
+                                      "OO|OO",
                                       &keywords[0],
                                       &format_p,
                                       &data_p,
-                                      &offset_p);
+                                      &offset_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
@@ -1282,7 +1355,7 @@ static PyObject *m_unpack_from(PyObject *module_p,
         return (NULL);
     }
 
-    unpacked_p = unpack_from(info_p, data_p, offset_p);
+    unpacked_p = unpack_from(info_p, data_p, offset_p, allow_truncated_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -1383,7 +1456,8 @@ static PyObject *m_pack_dict(PyObject *module_p, PyObject *args_p)
 static PyObject *unpack_dict(struct info_t *info_p,
                              PyObject *names_p,
                              PyObject *data_p,
-                             long offset)
+                             long offset,
+                             PyObject *allow_truncated_p)
 {
     struct bitstream_reader_t reader;
     PyObject *unpacked_p;
@@ -1393,6 +1467,7 @@ static PyObject *unpack_dict(struct info_t *info_p,
     Py_ssize_t size;
     int res;
     int produced_args;
+    int allow_truncated;
 
     if (PyList_GET_SIZE(names_p) < info_p->number_of_non_padding_fields) {
         PyErr_SetString(PyExc_ValueError, "Too few names.");
@@ -1412,7 +1487,9 @@ static PyObject *unpack_dict(struct info_t *info_p,
         goto out1;
     }
 
-    if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
+    allow_truncated = PyObject_IsTrue(allow_truncated_p);
+
+    if (!allow_truncated && size < ((info_p->number_of_bits + offset + 7) / 8)) {
         PyErr_SetString(PyExc_ValueError, "Short data.");
 
         goto out1;
@@ -1423,6 +1500,9 @@ static PyObject *unpack_dict(struct info_t *info_p,
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
+        if (size*8 < reader.bit_offset + info_p->fields[i].number_of_bits)
+            break;
+
         value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
 
         if (value_p != NULL) {
@@ -1444,20 +1524,38 @@ static PyObject *unpack_dict(struct info_t *info_p,
 }
 
 PyDoc_STRVAR(unpack_dict___doc__,
-             "unpack_dict(fmt, names, data)\n"
+             "unpack_dict(fmt, names, data, allow_truncated=False)\n"
              "--\n"
              "\n");
 
-static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
+static PyObject *m_unpack_dict(PyObject *module_p,
+                               PyObject *args_p,
+                               PyObject *kwargs_p)
 {
     PyObject *format_p;
     PyObject *names_p;
     PyObject *data_p;
+    PyObject *allow_truncated_p;
     PyObject *unpacked_p;
     struct info_t *info_p;
     int res;
+    static char *keywords[] = {
+        "fmt",
+        "names",
+        "data",
+        "allow_truncated",
+        NULL
+    };
 
-    res = PyArg_ParseTuple(args_p, "OOO", &format_p, &names_p, &data_p);
+    allow_truncated_p = py_zero_p;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OOO|O",
+                                      &keywords[0],
+                                      &format_p,
+                                      &names_p,
+                                      &data_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
@@ -1473,7 +1571,7 @@ static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
         return (NULL);
     }
 
-    unpacked_p = unpack_dict(info_p, names_p, data_p, 0);
+    unpacked_p = unpack_dict(info_p, names_p, data_p, 0, allow_truncated_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -1482,7 +1580,8 @@ static PyObject *m_unpack_dict(PyObject *module_p, PyObject *args_p)
 static PyObject *unpack_from_dict(struct info_t *info_p,
                                   PyObject *names_p,
                                   PyObject *data_p,
-                                  PyObject *offset_p)
+                                  PyObject *offset_p,
+                                  PyObject *allow_truncated_p)
 {
     long offset;
 
@@ -1492,7 +1591,7 @@ static PyObject *unpack_from_dict(struct info_t *info_p,
         return (NULL);
     }
 
-    return (unpack_dict(info_p, names_p, data_p, offset));
+    return (unpack_dict(info_p, names_p, data_p, offset, allow_truncated_p));
 }
 
 static PyObject *pack_into_dict(struct info_t *info_p,
@@ -1574,7 +1673,7 @@ static PyObject *m_pack_into_dict(PyObject *module_p,
 }
 
 PyDoc_STRVAR(unpack_from_dict___doc__,
-             "unpack_from_dict(fmt, names, data, offset=0)\n"
+             "unpack_from_dict(fmt, names, data, offset=0, allow_truncated=False)\n"
              "--\n"
              "\n");
 
@@ -1586,6 +1685,7 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
     PyObject *names_p;
     PyObject *data_p;
     PyObject *offset_p;
+    PyObject *allow_truncated_p;
     PyObject *unpacked_p;
     struct info_t *info_p;
     int res;
@@ -1594,18 +1694,21 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
         "names",
         "data",
         "offset",
+        "allow_truncated",
         NULL
     };
 
     offset_p = py_zero_p;
+    allow_truncated_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
-                                      "OOO|O",
+                                      "OOO|OO",
                                       &keywords[0],
                                       &format_p,
                                       &names_p,
                                       &data_p,
-                                      &offset_p);
+                                      &offset_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
@@ -1621,7 +1724,7 @@ static PyObject *m_unpack_from_dict(PyObject *module_p,
         return (NULL);
     }
 
-    unpacked_p = unpack_from_dict(info_p, names_p, data_p, offset_p);
+    unpacked_p = unpack_from_dict(info_p, names_p, data_p, offset_p, allow_truncated_p);
     PyMem_RawFree(info_p);
 
     return (unpacked_p);
@@ -1654,7 +1757,9 @@ PyDoc_STRVAR(byteswap___doc__,
              "--\n"
              "\n");
 
-static PyObject *m_byteswap(PyObject *module_p, PyObject *args_p)
+static PyObject *m_byteswap(PyObject *module_p,
+                            PyObject *args_p,
+                            PyObject *kwargs_p)
 {
     PyObject *format_p;
     PyObject *data_p;
@@ -1666,7 +1771,18 @@ static PyObject *m_byteswap(PyObject *module_p, PyObject *args_p)
     int res;
     int offset;
 
-    res = PyArg_ParseTuple(args_p, "OO", &format_p, &data_p);
+    static char *keywords[] = {
+        "fmt",
+        "data",
+        NULL
+    };
+
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OO",
+                                      &keywords[0],
+                                      &format_p,
+                                      &data_p);
 
     if (res == 0) {
         return (NULL);
@@ -1796,7 +1912,16 @@ static int compiled_format_init(struct compiled_format_t *self_p,
     int res;
     PyObject *format_p;
 
-    res = PyArg_ParseTuple(args_p, "O", &format_p);
+    static char *keywords[] = {
+        "fmt",
+        NULL
+    };
+
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "O",
+                                      &keywords[0],
+                                      &format_p);
 
     if (res == 0) {
         return (-1);
@@ -1835,18 +1960,31 @@ static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
 }
 
 static PyObject *m_compiled_format_unpack(struct compiled_format_t *self_p,
-                                          PyObject *args_p)
+                                          PyObject *args_p,
+                                          PyObject *kwargs_p)
 {
     PyObject *data_p;
+    PyObject *allow_truncated_p;
     int res;
+    static char *keywords[] = {
+        "data",
+        "allow_truncated",
+        NULL
+    };
 
-    res = PyArg_ParseTuple(args_p, "O", &data_p);
+    allow_truncated_p = py_zero_p;
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "O|O",
+                                      &keywords[0],
+                                      &data_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
     }
 
-    return (unpack(self_p->info_p, data_p, 0));
+    return (unpack(self_p->info_p, data_p, 0, allow_truncated_p));
 }
 
 static PyObject *m_compiled_format_pack_into(struct compiled_format_t *self_p,
@@ -1882,26 +2020,30 @@ static PyObject *m_compiled_format_unpack_from(struct compiled_format_t *self_p,
 {
     PyObject *data_p;
     PyObject *offset_p;
+    PyObject *allow_truncated_p;
     int res;
     static char *keywords[] = {
         "data",
         "offset",
+        "allow_truncated",
         NULL
     };
 
     offset_p = py_zero_p;
+    allow_truncated_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
-                                      "O|O",
+                                      "O|OO",
                                       &keywords[0],
                                       &data_p,
-                                      &offset_p);
+                                      &offset_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
     }
 
-    return (unpack_from(self_p->info_p, data_p, offset_p));
+    return (unpack_from(self_p->info_p, data_p, offset_p, allow_truncated_p));
 }
 
 static PyObject *m_compiled_format_calcsize(struct compiled_format_t *self_p)
@@ -2040,8 +2182,18 @@ static int compiled_format_dict_init(struct compiled_format_dict_t *self_p,
     int res;
     PyObject *format_p;
     PyObject *names_p;
+    static char *keywords[] = {
+        "fmt",
+        "names",
+        NULL
+    };
 
-    res = PyArg_ParseTuple(args_p, "OO", &format_p, &names_p);
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "OO",
+                                      &keywords[0],
+                                      &format_p,
+                                      &names_p);
 
     if (res == 0) {
         return (-1);
@@ -2089,9 +2241,30 @@ static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self
 
 static PyObject *m_compiled_format_dict_unpack(
     struct compiled_format_dict_t *self_p,
-    PyObject *data_p)
+    PyObject *args_p,
+    PyObject *kwargs_p)
 {
-    return (unpack_dict(self_p->info_p, self_p->names_p, data_p, 0));
+    PyObject *data_p;
+    PyObject *allow_truncated_p;
+    int res;
+    static char *keywords[] = {
+        "data",
+        "allow_truncated",
+        NULL
+    };
+
+    res = PyArg_ParseTupleAndKeywords(args_p,
+                                      kwargs_p,
+                                      "O|O",
+                                      &keywords[0],
+                                      &data_p,
+                                      &allow_truncated_p);
+
+    if (res == 0) {
+        return (NULL);
+    }
+
+    return (unpack_dict(self_p->info_p, self_p->names_p, data_p, 0, allow_truncated_p));
 }
 
 static PyObject *m_compiled_format_dict_pack_into(
@@ -2136,6 +2309,7 @@ static PyObject *m_compiled_format_dict_unpack_from(
 {
     PyObject *data_p;
     PyObject *offset_p;
+    PyObject *allow_truncated_p;
     int res;
     static char *keywords[] = {
         "data",
@@ -2144,18 +2318,24 @@ static PyObject *m_compiled_format_dict_unpack_from(
     };
 
     offset_p = py_zero_p;
+    allow_truncated_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
-                                      "O|O",
+                                      "O|OO",
                                       &keywords[0],
                                       &data_p,
-                                      &offset_p);
+                                      &offset_p,
+                                      &allow_truncated_p);
 
     if (res == 0) {
         return (NULL);
     }
 
-    return (unpack_from_dict(self_p->info_p, self_p->names_p, data_p, offset_p));
+    return (unpack_from_dict(self_p->info_p,
+                             self_p->names_p,
+                             data_p,
+                             offset_p,
+                             allow_truncated_p));
 }
 
 static PyObject *m_compiled_format_dict_calcsize(
@@ -2321,8 +2501,8 @@ static struct PyMethodDef methods[] = {
     },
     {
         "unpack",
-        m_unpack,
-        METH_VARARGS,
+        (PyCFunction)m_unpack,
+        METH_VARARGS | METH_KEYWORDS,
         unpack___doc__
     },
     {
@@ -2345,8 +2525,8 @@ static struct PyMethodDef methods[] = {
     },
     {
         "unpack_dict",
-        m_unpack_dict,
-        METH_VARARGS,
+        (PyCFunction)m_unpack_dict,
+        METH_VARARGS  | METH_KEYWORDS,
         unpack_dict___doc__
     },
     {
@@ -2369,8 +2549,8 @@ static struct PyMethodDef methods[] = {
     },
     {
         "byteswap",
-        m_byteswap,
-        METH_VARARGS,
+        (PyCFunction)m_byteswap,
+        METH_VARARGS | METH_KEYWORDS,
         byteswap___doc__
     },
     {

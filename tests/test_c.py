@@ -192,6 +192,17 @@ class CTest(unittest.TestCase):
         unpacked = unpack('f64', b'\x3f\xf0\x00\x00\x00\x00\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
 
+        # Too many bits to unpack.
+        with self.assertRaises(ValueError) as cm:
+            unpack('u9', b'\x00')
+
+        self.assertEqual(str(cm.exception),
+                         'Short data.')
+
+        # partial unpacking of truncated data
+        unpacked = unpack('u4u5', b'\x55', allow_truncated=True)
+        self.assertEqual(unpacked, (5, ))
+
     def test_pack_unpack(self):
         """Pack and unpack values.
 
