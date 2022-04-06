@@ -290,11 +290,11 @@ class _CompiledFormat(object):
 
         return bytes(_unpack_bytearray(len(bits), bits))
 
-    def unpack_from_any(self, data, offset):
+    def unpack_from_any(self, data, offset, allow_truncated):
         bits = bin(int(b'01' + binascii.hexlify(data), 16))[3 + offset:]
 
         # Sanity check.
-        if self._number_of_bits_to_unpack > len(bits):
+        if not allow_truncated and self._number_of_bits_to_unpack > len(bits):
             raise Error(
                 "unpack requires at least {} bits to unpack (got {})".format(
                     self._number_of_bits_to_unpack,
@@ -303,6 +303,13 @@ class _CompiledFormat(object):
         offset = 0
 
         for info in self._infos:
+            if offset + info.size > len(bits):
+                # Stop unpacking if we ran out of bytes to
+                # unpack. Note that this condition will never trigger
+                # if `allow_truncated` is not `True` because of the
+                # sanity check above.
+                return
+
             if isinstance(info, _Padding):
                 pass
             else:
@@ -392,12 +399,12 @@ class CompiledFormat(_CompiledFormat):
 
         return self.pack_any(args)
 
-    def unpack(self, data):
+    def unpack(self, data, allow_truncated=False):
         """See :func:`~bitstruct.unpack()`.
 
         """
 
-        return self.unpack_from(data)
+        return self.unpack_from(data, allow_truncated=allow_truncated)
 
     def pack_into(self, buf, offset, *args, **kwargs):
         """See :func:`~bitstruct.pack_into()`.
@@ -413,13 +420,13 @@ class CompiledFormat(_CompiledFormat):
 
         self.pack_into_any(buf, offset, args, **kwargs)
 
-    def unpack_from(self, data, offset=0):
+    def unpack_from(self, data, offset=0, allow_truncated=False):
         """See :func:`~bitstruct.unpack_from()`.
 
         """
 
-        return tuple([v[1] for v in self.unpack_from_any(data, offset)])
-
+        return tuple([v[1] for v in self.unpack_from_any(
+            data, offset, allow_truncated=allow_truncated)])
 
 class CompiledFormatDict(_CompiledFormat):
     """See :class:`~bitstruct.CompiledFormat`.
@@ -436,12 +443,12 @@ class CompiledFormatDict(_CompiledFormat):
         except KeyError as e:
             raise Error('{} not found in data dictionary'.format(str(e)))
 
-    def unpack(self, data):
+    def unpack(self, data, allow_truncated=False):
         """See :func:`~bitstruct.unpack_dict()`.
 
         """
 
-        return self.unpack_from(data)
+        return self.unpack_from(data, allow_truncated=allow_truncated)
 
     def pack_into(self, buf, offset, data, **kwargs):
         """See :func:`~bitstruct.pack_into_dict()`.
@@ -453,13 +460,14 @@ class CompiledFormatDict(_CompiledFormat):
         except KeyError as e:
             raise Error('{} not found in data dictionary'.format(str(e)))
 
-    def unpack_from(self, data, offset=0):
+    def unpack_from(self, data, offset=0, allow_truncated=False):
         """See :func:`~bitstruct.unpack_from_dict()`.
 
         """
 
-        return {info.name: v for info, v in self.unpack_from_any(data, offset)}
-
+        return {
+            info.name: v for info, v in self.unpack_from_any(
+                data, offset, allow_truncated=allow_truncated)}
 
 def pack(fmt, *args):
     """Return a bytes object containing the values v1, v2, ... packed
@@ -513,13 +521,16 @@ def pack(fmt, *args):
     return CompiledFormat(fmt).pack(*args)
 
 
-def unpack(fmt, data):
+def unpack(fmt, data, allow_truncated=False):
     """Unpack `data` (bytes or bytearray) according to given format string
-    `fmt`. The result is a tuple even if it contains exactly one item.
+    `fmt`. If `allow_truncated` is `True`, `data` may be shorter than
+    the number of items specified by `fmt`; in this case, only the
+    complete items will be unpacked. The result is a tuple even if it
+    contains exactly one item.
 
     """
 
-    return CompiledFormat(fmt).unpack(data)
+    return CompiledFormat(fmt).unpack(data, allow_truncated=allow_truncated)
 
 
 def pack_into(fmt, buf, offset, *args, **kwargs):
@@ -536,14 +547,18 @@ def pack_into(fmt, buf, offset, *args, **kwargs):
                                          **kwargs)
 
 
-def unpack_from(fmt, data, offset=0):
+def unpack_from(fmt, data, offset=0, allow_truncated=False):
     """Unpack `data` (bytes or bytearray) according to given format string
-    `fmt`, starting at given bit offset `offset`. The result is a
-    tuple even if it contains exactly one item.
+    `fmt`, starting at given bit offset `offset`. If `allow_truncated`
+    is `True`, `data` may be shorter than the number of items
+    specified by `fmt`; in this case, only the complete items will be
+    unpacked. The result is a tuple even if it contains exactly one
+    item.
 
     """
 
-    return CompiledFormat(fmt).unpack_from(data, offset)
+    return CompiledFormat(fmt).unpack_from(
+        data, offset, allow_truncated=allow_truncated)
 
 
 def pack_dict(fmt, names, data):
@@ -561,7 +576,7 @@ def pack_dict(fmt, names, data):
     return CompiledFormatDict(fmt, names).pack(data)
 
 
-def unpack_dict(fmt, names, data):
+def unpack_dict(fmt, names, data, allow_truncated=False):
     """Same as :func:`~bitstruct.unpack()`, but returns a dictionary.
 
     See :func:`~bitstruct.pack_dict()` for details on `names`.
@@ -571,7 +586,8 @@ def unpack_dict(fmt, names, data):
 
     """
 
-    return CompiledFormatDict(fmt, names).unpack(data)
+    return CompiledFormatDict(fmt, names).unpack(
+        data, allow_truncated=allow_truncated)
 
 
 def pack_into_dict(fmt, names, buf, offset, data, **kwargs):
@@ -588,15 +604,16 @@ def pack_into_dict(fmt, names, buf, offset, data, **kwargs):
                                                     **kwargs)
 
 
-def unpack_from_dict(fmt, names, data, offset=0):
-    """Same as :func:`~bitstruct.unpack_from_dict()`, but returns a
+def unpack_from_dict(fmt, names, data, offset=0, allow_truncated=False):
+    """Same as :func:`~bitstruct.unpack_from()`, but returns a
     dictionary.
 
     See :func:`~bitstruct.pack_dict()` for details on `names`.
 
     """
 
-    return CompiledFormatDict(fmt, names).unpack_from(data, offset)
+    return CompiledFormatDict(fmt, names).unpack_from(
+        data, offset, allow_truncated=allow_truncated)
 
 
 def calcsize(fmt):

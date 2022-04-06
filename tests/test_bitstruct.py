@@ -196,6 +196,10 @@ class BitStructTest(unittest.TestCase):
         with self.assertRaises(Error) as cm:
             unpack('u9', b'\x00')
 
+        # partial unpacking of truncated data
+        unpacked = unpack('u4u5', b'\x55', allow_truncated=True)
+        self.assertEqual(unpacked, (5, ))
+
         self.assertEqual(str(cm.exception),
                          'unpack requires at least 9 bits to unpack (got 8)')
 
