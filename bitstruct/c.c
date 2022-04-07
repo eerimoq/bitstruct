@@ -2253,6 +2253,7 @@ static PyObject *m_compiled_format_dict_unpack(
         NULL
     };
 
+    allow_truncated_p = py_zero_p;
     res = PyArg_ParseTupleAndKeywords(args_p,
                                       kwargs_p,
                                       "O|O",
