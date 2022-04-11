@@ -114,6 +114,30 @@ class BitStructTest(unittest.TestCase):
         self.assertEqual(str(cm.exception),
                          "'float' object has no attribute 'encode'")
 
+        # Too long integer-like values.
+        with self.assertRaises(Error) as cm:
+            pack('b8200', True)
+        with self.assertRaises(Error) as cm:
+            pack('s8200', 0)
+        with self.assertRaises(Error) as cm:
+            pack('u8200', 0)
+        with self.assertRaises(Error) as cm:
+            pack('u99999999999999', 0)
+
+        # Long byte-like objects
+        packed = pack('r10000', b'\xff'*(10000//8))
+        self.assertEqual(packed, b'\xff'*(10000//8))
+
+        packed = pack('t10000', 'a'*(10000//8))
+        self.assertEqual(packed, b'a'*(10000//8))
+
+        packed = pack('p10000')
+        self.assertEqual(packed, b'\x00'*(10000//8))
+
+        packed = pack('P10000')
+        self.assertEqual(packed, b'\xff'*(10000//8))
+
+
     def test_unpack(self):
         """Unpack values.
 
@@ -220,6 +244,30 @@ class BitStructTest(unittest.TestCase):
                           byteswap('414',
                                    b'\x01\x00\x00\x00\x01\xe7\xa2\x91\x00'))
         self.assertEqual(unpacked, (1, 1, 0x12345, 0x67))
+
+        # Too long integer-like values.
+        with self.assertRaises(Error) as cm:
+            unpack('b8200', b'\xff'*(8200//8))
+        with self.assertRaises(Error) as cm:
+            unpack('s8200', b'\xff'*(8200//8))
+        with self.assertRaises(Error) as cm:
+            unpack('u8200', b'\xff'*(8200//8))
+        with self.assertRaises(Error) as cm:
+            unpack('u99999999999999', f'\xff')
+
+        # Long byte-like objects
+        unpacked = unpack('r10000', b'\xff'*(10000//8))
+        self.assertEqual(unpacked, (b'\xff'*(10000//8), ))
+
+        unpacked = unpack('t10000', b'a'*(10000//8))
+        self.assertEqual(unpacked, ('a'*(10000//8), ))
+
+        unpacked = unpack('p10000', b'\x00'*(10000//8))
+        self.assertEqual(unpacked, ())
+
+        unpacked = unpack('P10000', b'a'*(10000//8))
+        self.assertEqual(unpacked, ())
+
 
     def test_pack_unpack(self):
         """Pack and unpack values.

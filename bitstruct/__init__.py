@@ -23,6 +23,10 @@ class _Info(object):
 class _SignedInteger(_Info):
 
     def __init__(self, size, name):
+        max_size = 8192
+        if size > max_size:
+            raise Error(f"size too large at 's{size}': maximum is {max_size}'")
+
         super(_SignedInteger, self).__init__(size, name)
         self.minimum = -2 ** (size - 1)
         self.maximum = -self.minimum - 1
@@ -57,6 +61,10 @@ class _SignedInteger(_Info):
 class _UnsignedInteger(_Info):
 
     def __init__(self, size, name):
+        max_size = 8192
+        if size > max_size:
+            raise Error(f"size too large at 'u{size}': maximum is {max_size}'")
+
         super(_UnsignedInteger, self).__init__(size, name)
         self.maximum = 2 ** size - 1
 
