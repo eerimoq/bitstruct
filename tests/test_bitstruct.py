@@ -197,7 +197,9 @@ class BitStructTest(unittest.TestCase):
             unpack('u9', b'\x00')
 
         # partial unpacking of truncated data
-        unpacked = unpack('u4u5', b'\x55', allow_truncated=True)
+        unpacked = unpack('u4u5', b'\x5f', allow_truncated=True)
+        self.assertEqual(unpacked, (5, ))
+        unpacked = unpack('p8u4u5', b'\x00\x5f', allow_truncated=True)
         self.assertEqual(unpacked, (5, ))
 
         self.assertEqual(str(cm.exception),
