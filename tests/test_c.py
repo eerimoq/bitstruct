@@ -200,7 +200,9 @@ class CTest(unittest.TestCase):
                          'Short data.')
 
         # partial unpacking of truncated data
-        unpacked = unpack('u4u5', b'\x55', allow_truncated=True)
+        unpacked = unpack('u4u5', b'\x5f', allow_truncated=True)
+        self.assertEqual(unpacked, (5, ))
+        unpacked = unpack('p8u4u5', b'\x00\x5f', allow_truncated=True)
         self.assertEqual(unpacked, (5, ))
 
     def test_pack_unpack(self):

@@ -1060,20 +1060,24 @@ static PyObject *unpack(struct info_t *info_p,
         num_result_fields = 0;
         tmp = 0;
         for (i = 0; i < info_p->number_of_fields; i++) {
-            if (size*8 < tmp + info_p->fields[i].number_of_bits)
+            if (size*8 < tmp + info_p->fields[i].number_of_bits) {
                 break;
+            }
 
             tmp += info_p->fields[i].number_of_bits;
-            ++num_result_fields;
+
+            if (!info_p->fields[i].is_padding) {
+                ++num_result_fields;
+            }
         }
     }
     else {
         num_result_fields = info_p->number_of_non_padding_fields;
 
         if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
-          PyErr_SetString(PyExc_ValueError, "Short data.");
+            PyErr_SetString(PyExc_ValueError, "Short data.");
 
-          return (NULL);
+            return (NULL);
         }
     }
 
@@ -1088,8 +1092,9 @@ static PyObject *unpack(struct info_t *info_p,
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
-        if (size*8 < reader.bit_offset + info_p->fields[i].number_of_bits)
+        if (produced_args == num_result_fields) {
             break;
+        }
 
         value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
 
