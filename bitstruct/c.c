@@ -1037,19 +1037,17 @@ static PyObject *unpack(struct info_t *info_p,
                         PyObject *allow_truncated_p)
 {
     struct bitstream_reader_t reader;
-    PyObject *unpacked_p;
+    PyObject *unpacked_p = NULL;
     PyObject *value_p;
-    char *packed_p;
+    Py_buffer view = {NULL, NULL};
     int i;
     int tmp;
     int produced_args;
-    Py_ssize_t size;
     int res;
     int allow_truncated;
     int num_result_fields;
 
-    res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
-
+    res = PyObject_GetBuffer(data_p, &view, PyBUF_C_CONTIGUOUS);
     if (res == -1) {
         return (NULL);
     }
@@ -1060,7 +1058,7 @@ static PyObject *unpack(struct info_t *info_p,
         num_result_fields = 0;
         tmp = 0;
         for (i = 0; i < info_p->number_of_fields; i++) {
-            if (size*8 < tmp + info_p->fields[i].number_of_bits) {
+            if (view.len*8 < tmp + info_p->fields[i].number_of_bits) {
                 break;
             }
 
@@ -1074,20 +1072,19 @@ static PyObject *unpack(struct info_t *info_p,
     else {
         num_result_fields = info_p->number_of_non_padding_fields;
 
-        if (size < ((info_p->number_of_bits + offset + 7) / 8)) {
+        if (view.len < ((info_p->number_of_bits + offset + 7) / 8)) {
             PyErr_SetString(PyExc_ValueError, "Short data.");
-
-            return (NULL);
+            goto exit;
         }
     }
 
     unpacked_p = PyTuple_New(num_result_fields);
 
     if (unpacked_p == NULL) {
-        return (NULL);
+        goto exit;
     }
 
-    bitstream_reader_init(&reader, (uint8_t *)packed_p);
+    bitstream_reader_init(&reader, (uint8_t *)view.buf);
     bitstream_reader_seek(&reader, offset);
     produced_args = 0;
 
@@ -1111,7 +1108,8 @@ static PyObject *unpack(struct info_t *info_p,
         unpacked_p = NULL;
     }
     */
-
+exit:
+    PyBuffer_Release(&view);
     return (unpacked_p);
 }
 

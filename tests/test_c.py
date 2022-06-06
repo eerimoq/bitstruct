@@ -205,6 +205,10 @@ class CTest(unittest.TestCase):
         unpacked = unpack('p8u4u5', b'\x00\x5f', allow_truncated=True)
         self.assertEqual(unpacked, (5, ))
 
+        # test bytearray unpacking
+        unpacked = unpack('u1u1s6u7u9', bytearray(b'\x3e\x82\x16'))
+        self.assertEqual(unpacked, (0, 0, -2, 65, 22))
+
     def test_pack_unpack(self):
         """Pack and unpack values.
 
