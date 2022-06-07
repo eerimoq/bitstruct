@@ -531,12 +531,15 @@ class CTest(unittest.TestCase):
             if names is None:
                 unpacked_1 = cf.unpack(packed_1)
                 unpacked_2 = unpack(fmt, packed_2)
+                unpacked_3 = cf.unpack(bytearray(packed_1))  # test bytearray unpacking
             else:
                 unpacked_1 = cf.unpack(packed_1)
                 unpacked_2 = unpack_dict(fmt, names, packed_2)
+                unpacked_3 = cf.unpack(bytearray(packed_1))  # test bytearray unpacking
 
             self.assertEqual(unpacked_1, decoded)
             self.assertEqual(unpacked_2, decoded)
+            self.assertEqual(unpacked_3, decoded)
 
     def test_compile_formats(self):
         if not is_cpython_3():

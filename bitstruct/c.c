@@ -1465,9 +1465,8 @@ static PyObject *unpack_dict(struct info_t *info_p,
     struct bitstream_reader_t reader;
     PyObject *unpacked_p;
     PyObject *value_p;
-    char *packed_p;
+    Py_buffer view = {NULL, NULL};
     int i;
-    Py_ssize_t size;
     int res;
     int produced_args;
     int allow_truncated;
@@ -1484,7 +1483,7 @@ static PyObject *unpack_dict(struct info_t *info_p,
         return (NULL);
     }
 
-    res = PyBytes_AsStringAndSize(data_p, &packed_p, &size);
+    res = PyObject_GetBuffer(data_p, &view, PyBUF_C_CONTIGUOUS);
 
     if (res == -1) {
         goto out1;
@@ -1492,18 +1491,18 @@ static PyObject *unpack_dict(struct info_t *info_p,
 
     allow_truncated = PyObject_IsTrue(allow_truncated_p);
 
-    if (!allow_truncated && size < ((info_p->number_of_bits + offset + 7) / 8)) {
+    if (!allow_truncated && view.len < ((info_p->number_of_bits + offset + 7) / 8)) {
         PyErr_SetString(PyExc_ValueError, "Short data.");
 
         goto out1;
     }
 
-    bitstream_reader_init(&reader, (uint8_t *)packed_p);
+    bitstream_reader_init(&reader, (uint8_t *)view.buf);
     bitstream_reader_seek(&reader, offset);
     produced_args = 0;
 
     for (i = 0; i < info_p->number_of_fields; i++) {
-        if (size*8 < reader.bit_offset + info_p->fields[i].number_of_bits)
+        if (view.len*8 < reader.bit_offset + info_p->fields[i].number_of_bits)
             break;
 
         value_p = info_p->fields[i].unpack(&reader, &info_p->fields[i]);
@@ -1521,6 +1520,10 @@ static PyObject *unpack_dict(struct info_t *info_p,
     if (PyErr_Occurred() != NULL) {
         Py_DECREF(unpacked_p);
         unpacked_p = NULL;
+    }
+
+    if (view.obj != NULL) {
+        PyBuffer_Release(&view);
     }
 
     return (unpacked_p);
