@@ -253,7 +253,7 @@ class _CompiledFormat(object):
     def __init__(self,
                  fmt,
                  names=None,
-                 text_encoding='urf-8',
+                 text_encoding='utf-8',
                  text_errors='strict'):
         infos, byte_order = _parse_format(fmt, names, text_encoding, text_errors)
         self._infos = infos
@@ -537,10 +537,16 @@ def unpack(fmt,
            text_encoding='utf-8',
            text_errors='strict'):
     """Unpack `data` (bytes or bytearray) according to given format string
-    `fmt`. If `allow_truncated` is `True`, `data` may be shorter than
-    the number of items specified by `fmt`; in this case, only the
+    `fmt`.
+
+    If `allow_truncated` is `True`, `data` may be shorter than the
+    number of items specified by `fmt`; in this case, only the
     complete items will be unpacked. The result is a tuple even if it
     contains exactly one item.
+
+    Text fields are decoded with given encoding `text_encoding` and
+    error handling as given by `text_errors` (both passed to
+    `bytes.decode()`).
 
     """
 
