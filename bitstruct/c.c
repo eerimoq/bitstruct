@@ -1957,6 +1957,7 @@ static void compiled_format_dealloc(struct compiled_format_t *self_p)
 {
     PyMem_RawFree(self_p->info_p);
     Py_DECREF(self_p->format_p);
+    Py_TYPE(self_p)->tp_free((PyObject *)self_p);
 }
 
 static PyObject *m_compiled_format_pack(struct compiled_format_t *self_p,
@@ -2237,6 +2238,7 @@ static void compiled_format_dict_dealloc(struct compiled_format_dict_t *self_p)
     PyMem_RawFree(self_p->info_p);
     Py_DECREF(self_p->names_p);
     Py_DECREF(self_p->format_p);
+    Py_TYPE(self_p)->tp_free((PyObject *)self_p);
 }
 
 static PyObject *m_compiled_format_dict_pack(struct compiled_format_dict_t *self_p,
