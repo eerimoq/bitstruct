@@ -645,6 +645,21 @@ class BitStructTest(unittest.TestCase):
         unpacked = unpack('t8', b'\xff', text_errors='ignore')[0]
         self.assertEqual(unpacked, '')
 
+        cf = bitstruct.compile('t8', text_encoding='latin-1', text_errors='replace')
+        unpacked = cf.unpack(b'\xff')[0]
+        self.assertEqual(unpacked, 'ÿ')
+
+        cf = bitstruct.compile('t8', text_encoding='utf-8', text_errors='ignore')
+        unpacked = cf.unpack(b'\xff')[0]
+        self.assertEqual(unpacked, '')
+
+        cf = bitstruct.compile('t8',
+                               names=['a'],
+                               text_encoding='utf-8',
+                               text_errors='replace')
+        unpacked = cf.unpack(b'\xff')
+        self.assertEqual(unpacked, {'a': '�'})
+
     def test_pack_unpack_dict(self):
         unpacked = {
             'foo': 0,

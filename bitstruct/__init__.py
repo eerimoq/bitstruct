@@ -684,7 +684,10 @@ def byteswap(fmt, data, offset=0):
     return data_swapped.getvalue()
 
 
-def compile(fmt, names=None):
+def compile(fmt,
+            names=None,
+            text_encoding='utf-8',
+            text_errors='strict'):
     """Compile given format string `fmt` and return a compiled format
     object that can be used to pack and/or unpack data multiple times.
 
@@ -694,9 +697,12 @@ def compile(fmt, names=None):
 
     See :func:`~bitstruct.pack_dict()` for details on `names`.
 
+    See :func:`~bitstruct.unpack()` for details on `text_encoding` and
+    `text_errors`.
+
     """
 
     if names is None:
-        return CompiledFormat(fmt)
+        return CompiledFormat(fmt, text_encoding, text_errors)
     else:
-        return CompiledFormatDict(fmt, names)
+        return CompiledFormatDict(fmt, names, text_encoding, text_errors)
