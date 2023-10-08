@@ -4,8 +4,8 @@ requires = ["setuptools >= 68.0"]
 
 [project]
 name = "bitstruct"
-description = """This module performs conversions between Python values
-and C bit field structs represented as Python
+description = """This module performs conversions between Python values \
+and C bit field structs represented as Python \
 byte strings."""
 readme = "README.rst"
 requires-python = ">=3.7"
@@ -35,6 +35,9 @@ Documentation = "https://bitstruct.readthedocs.io/en/latest/"
 Issues = "https://github.com/eerimoq/bitstruct/issues"
 Source = "https://github.com/eerimoq/bitstruct"
 Homepage = "https://github.com/eerimoq/bitstruct"
+
+[tool.setuptools]
+packages = ["bitstruct"]
 
 [tool.setuptools.dynamic]
 version = {attr = "bitstruct.__version__"}
