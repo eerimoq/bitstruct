@@ -1,16 +1,16 @@
 __version__ = '8.17.0'
 
+import binascii
 import re
 import struct
 from io import BytesIO
-import binascii
 
 
 class Error(Exception):
     pass
 
 
-class _Info(object):
+class _Info:
 
     def __init__(self, size, name=None):
         self.size = size
@@ -21,7 +21,7 @@ class _Info(object):
 class _SignedInteger(_Info):
 
     def __init__(self, size, name):
-        super(_SignedInteger, self).__init__(size, name)
+        super().__init__(size, name)
         self.minimum = -2 ** (size - 1)
         self.maximum = -self.minimum - 1
 
@@ -55,7 +55,7 @@ class _SignedInteger(_Info):
 class _UnsignedInteger(_Info):
 
     def __init__(self, size, name):
-        super(_UnsignedInteger, self).__init__(size, name)
+        super().__init__(size, name)
         self.maximum = 2 ** size - 1
 
     def pack(self, arg):
@@ -63,10 +63,7 @@ class _UnsignedInteger(_Info):
 
         if value < 0 or value > self.maximum:
             raise Error(
-                '"u{}" requires 0 <= integer <= {} (got {})'.format(
-                    self.size,
-                    self.maximum,
-                    arg))
+                f'"u{self.size}" requires 0 <= integer <= {self.maximum} (got {arg})')
 
         return bin(value + (1 << self.size))[3:]
 
@@ -77,10 +74,10 @@ class _UnsignedInteger(_Info):
 class _Boolean(_UnsignedInteger):
 
     def pack(self, arg):
-        return super(_Boolean, self).pack(int(bool(arg)))
+        return super().pack(int(bool(arg)))
 
     def unpack(self, bits):
-        return bool(super(_Boolean, self).unpack(bits))
+        return bool(super().unpack(bits))
 
 
 class _Float(_Info):
@@ -95,8 +92,7 @@ class _Float(_Info):
         elif self.size == 64:
             value = struct.pack('>d', value)
         else:
-            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
-                self.size))
+            raise Error(f'expected float size of 16, 32, or 64 bits (got {self.size})')
 
         return bin(int(b'01' + binascii.hexlify(value), 16))[3:]
 
@@ -110,8 +106,7 @@ class _Float(_Info):
         elif self.size == 64:
             value = struct.unpack('>d', packed)[0]
         else:
-            raise Error('expected float size of 16, 32, or 64 bits (got {})'.format(
-                self.size))
+            raise Error(f'expected float size of 16, 32, or 64 bits (got {self.size})')
 
         return value
 
@@ -153,7 +148,7 @@ class _OnePadding(_Padding):
 class _Text(_Info):
 
     def __init__(self, size, name, encoding, errors):
-        super(_Text, self).__init__(size, name)
+        super().__init__(size, name)
         self.encoding = encoding
         self.errors = errors
 
@@ -178,7 +173,7 @@ def _parse_format(fmt, names, text_encoding, text_errors):
     parsed_infos = re.findall(r'([<>]?)([a-zA-Z])(\d+)(\s*)', fmt)
 
     if ''.join([''.join(info) for info in parsed_infos]) != fmt:
-        raise Error("bad format '{}'".format(fmt + byte_order))
+        raise Error(f"bad format '{fmt + byte_order}'")
 
     # Use big endian as default and use the endianness of the previous
     # value if none is given for the current value.
@@ -194,7 +189,7 @@ def _parse_format(fmt, names, text_encoding, text_errors):
         size = int(parsed_info[2])
 
         if size == 0:
-            raise Error("bad format '{}'".format(fmt + byte_order))
+            raise Error(f"bad format '{fmt + byte_order}'")
 
         if names is None:
             name = i
@@ -224,7 +219,7 @@ def _parse_format(fmt, names, text_encoding, text_errors):
         elif type_ == 'P':
             info = _OnePadding(size)
         else:
-            raise Error("bad char '{}' in format".format(type_))
+            raise Error(f"bad char '{type_}' in format")
 
         info.endianness = endianness
 
@@ -246,7 +241,7 @@ def _unpack_bytearray(size, bits):
     return binascii.unhexlify(hex(int('10000000' + bits, 2))[4:].rstrip('L'))
 
 
-class _CompiledFormat(object):
+class _CompiledFormat:
 
     def __init__(self,
                  fmt,
@@ -362,8 +357,7 @@ class _CompiledFormat(object):
 
         if len(bits) > len(buf_bits):
             raise Error(
-                'pack_into requires a buffer of at least {} bits'.format(
-                    len(bits)))
+                f'pack_into requires a buffer of at least {len(bits)} bits')
 
         buf[:] = _unpack_bytearray(len(bits), bits)
 
@@ -385,7 +379,7 @@ class CompiledFormat(_CompiledFormat):
     """
 
     def __init__(self, fmt, text_encoding='utf-8', text_errors='strict'):
-        super(CompiledFormat, self).__init__(fmt, None, text_encoding, text_errors)
+        super().__init__(fmt, None, text_encoding, text_errors)
         self._number_of_arguments = 0
 
         for info in self._infos:
@@ -448,7 +442,7 @@ class CompiledFormatDict(_CompiledFormat):
         try:
             return self.pack_any(data)
         except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
+            raise Error(f'{str(e)} not found in data dictionary')
 
     def unpack(self, data, allow_truncated=False):
         """See :func:`~bitstruct.unpack_dict()`.
@@ -465,7 +459,7 @@ class CompiledFormatDict(_CompiledFormat):
         try:
             self.pack_into_any(buf, offset, data, **kwargs)
         except KeyError as e:
-            raise Error('{} not found in data dictionary'.format(str(e)))
+            raise Error(f'{str(e)} not found in data dictionary')
 
     def unpack_from(self, data, offset=0, allow_truncated=False):
         """See :func:`~bitstruct.unpack_from_dict()`.
