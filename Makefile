@@ -1,3 +1,3 @@
 test:
-	python3 setup.py build_ext -b .
+	python3 -m pip install -e .
 	python3 -m unittest
