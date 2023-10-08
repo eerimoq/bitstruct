@@ -50,5 +50,5 @@ version = {attr = "bitstruct.__version__"}
 
 [tool.cibuildwheel]
 test-requires = "pytest"
-test-command = "pytest {project}/test"
+test-command = "pytest  -v --assert=plain {project}/tests"
 build-frontend = "build"
