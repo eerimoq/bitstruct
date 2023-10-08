@@ -1,11 +1,9 @@
-from __future__ import print_function
+__version__ = '8.17.0'
 
 import re
 import struct
 from io import BytesIO
 import binascii
-
-from .version import __version__
 
 
 class Error(Exception):
