@@ -36,8 +36,8 @@ Issues = "https://github.com/eerimoq/bitstruct/issues"
 Source = "https://github.com/eerimoq/bitstruct"
 Homepage = "https://github.com/eerimoq/bitstruct"
 
-[tool.setuptools]
-packages = ["bitstruct"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "bitstruct.__version__"}
