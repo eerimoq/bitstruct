@@ -4,7 +4,7 @@ import platform
 import setuptools
 
 
-if platform.python_implementation() in ("CPython", "PyPy"):
+if platform.python_implementation() == "CPython":
     ext_modules = [
         setuptools.Extension(
             "bitstruct.c",

@@ -52,3 +52,4 @@ version = {attr = "bitstruct.__version__"}
 test-requires = "pytest"
 test-command = "pytest  -v --assert=plain {project}/tests"
 build-frontend = "build"
+skip = "pp*"
