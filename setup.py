@@ -27,7 +27,7 @@ if is_cpython_3():
             [
                 setuptools.Extension(
                     "bitstruct.c",
-                    sources=["bitstruct/c.c", "bitstruct/bitstream.c"],
+                    sources=["src/bitstruct/c.c", "src/bitstruct/bitstream.c"],
                 )
             ]
         )
