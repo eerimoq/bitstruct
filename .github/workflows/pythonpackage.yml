@@ -6,6 +6,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
@@ -21,4 +22,4 @@ jobs:
         python -m pip install .
     - name: Test
       run: |
-        python -m pytest -v --assert=plain .\tests\
+        python -m pytest -v --assert=plain ./tests
