@@ -1,8 +1,11 @@
 name: Build & Release
 
 on:
-  release:
-    types: [ published ]
+  push:
+    tags:
+    - '*'
+  workflow_dispatch:
+
 
 jobs:
   build_wheels:
