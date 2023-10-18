@@ -1,4 +1,4 @@
-__version__ = '8.17.0'
+__version__ = '8.18.0'
 
 import binascii
 import re
