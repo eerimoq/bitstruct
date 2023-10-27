@@ -13,7 +13,9 @@ if platform.python_implementation() == "CPython":
             ],
         )
     ]
+else:
+    ext_modules = []
 
-    setuptools.setup(
-        ext_modules=ext_modules,
-    )
+setuptools.setup(
+    ext_modules=ext_modules,
+)
