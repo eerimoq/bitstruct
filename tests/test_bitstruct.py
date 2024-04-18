@@ -277,6 +277,15 @@ class BitStructTest(unittest.TestCase):
         unpacked = unpack('u1u5u2u16', byteswap('12', packed))
         self.assertEqual(unpacked, (1, 2, 3, 1024))
 
+    def test_bytereverse(self):
+        """Byte reverse.
+
+        """
+        ref = b'\x11\x22\x33\xFF\x00\x80\x7F'
+        res = b'\x88\x44\xCC\xFF\x00\x01\xFE'
+
+        self.assertEqual(bytereverse(ref), res)
+
     def test_endianness(self):
         """Test pack/unpack with endianness information in the format string.
 
