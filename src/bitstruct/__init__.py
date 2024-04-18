@@ -676,6 +676,14 @@ def byteswap(fmt, data, offset=0):
     return data_swapped.getvalue()
 
 
+def bytereverse(data):
+    """Reverse bits in `data` bytes. For example, the bytes ``\\x11\\x22``
+    will produce the result ``\\x88\\x44``
+    
+    """
+    return pack('<' + 'u8' * len(data), *data)
+
+
 def compile(fmt,
             names=None,
             text_encoding='utf-8',
