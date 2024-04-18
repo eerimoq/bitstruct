@@ -763,6 +763,160 @@ class BitStructTest(unittest.TestCase):
             self.assertEqual(pack(fmt, value), packed)
             self.assertEqual(unpack(fmt, packed), (value, ))
 
+    def test_align_right(self):
+        # Pack
+        packed = pack('u1u1s6u7u9', 0, 0, -2, 65, 22, align_right=True)
+        self.assertEqual(packed, b'\x3e\x82\x16')
+
+        packed = pack('u1', 1, align_right=True)
+        self.assertEqual(packed, b'\x01')
+
+        packed = pack('u77', 0x100000000001000000, align_right=True)
+        ref = b'\x00\x10\x00\x00\x00\x00\x01\x00\x00\x00'
+
+        packed = pack('b1', True, align_right=True)
+        self.assertEqual(packed, b'\x01')
+
+        packed = pack('b1p6b1', True, True, align_right=True)
+        self.assertEqual(packed, b'\x81')
+
+        # Unpack
+        unpacked = unpack('u1', bytearray(b'\x80'), align_right=True)
+        self.assertEqual(unpacked, (0, ))
+
+        unpacked = unpack('u1', bytearray(b'\x01'), align_right=True)
+        self.assertEqual(unpacked, (1, ))
+
+        unpacked = unpack('u1', bytearray(b'\x01'), align_right=False)
+        self.assertEqual(unpacked, (0, ))
+
+        packed = b'\x00\x80\x00\x00\x00\x00\x08\x00\x00\x00'
+        unpacked = unpack('u77', packed, align_right=True)
+        self.assertEqual(unpacked, (0x800000000008000000,))
+
+        # Too many bits to unpack.
+        with self.assertRaises(Error) as cm:
+            unpack('u9', b'\x00', align_right=True)
+
+        # # partial unpacking of truncated data (errors with align_right)
+        # with self.assertRaises(Error) as cm:
+        #     unpack('u4u5', b'\x5f', allow_truncated=True, align_right=True)
+        # self.assertEqual(str(cm.exception),
+        #                  'cannot allow for truncated unpack with align_right')
+        # with self.assertRaises(Error) as cm:
+        #     unpack('p8u4u5', b'\x00\x5f', allow_truncated=True, align_right=True)
+        # self.assertEqual(str(cm.exception),
+        #                  'cannot allow for truncated unpack with align_right')
+
+        # Endianness
+        ref = b'\x00\x91\xa6\xbf\x80\x00\x00'
+        packed = pack('>u19s3f32', 0x1234, -2, -1.0, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('>u19s3f32', packed, align_right=True)
+        self.assertEqual(unpacked, (0x1234, -2, -1.0))
+
+        ref = b'\x0b\x12\x03\x00\x00\x01\xfd'
+        packed = pack('<u19s3f32', 0x1234, -2, -1.0, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('<u19s3f32', packed, align_right=True)
+        self.assertEqual(unpacked, (0x1234, -2, -1.0))
+
+        ref = b'\x00\x00\x17\x9f\xf8\x00\x00\x00\x00\x00\x00\x40'
+        packed = pack('>u19<s5>f64r3p4', 1, -2, 1.0, b'\x04', align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('>u19<s5>f64r3p4', packed, align_right=True)
+        self.assertEqual(unpacked, (1, -2, 1.0, b'\x04'))
+
+        ref = b'\x40\x00\x0f\x00\x00\x00\x00\x00\x00\x07\xfe\x10'
+        packed = pack('<u19>s5<f64r3p4', 1, -2, 1.0, b'\x04', align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('<u19>s5<f64r3p4', packed, align_right=True)
+        self.assertEqual(unpacked, (1, -2, 1.0, b'\x04'))
+
+        ref = b'\x01'
+        packed = pack('u2', 1, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('<u2', packed, align_right=True)
+        self.assertEqual(unpacked, (2, ))
+
+        # Byte order
+        ref = b'\x01\x23\x40'
+        packed = pack('p4u16p4>', 0x1234, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('p4u16p4>', packed, align_right=True)
+        self.assertEqual(unpacked, (0x1234,))
+
+        ref = b'\x04\x23\x10'
+        packed = pack('p4u16p4<', 0x1234, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('p4u16p4<', packed, align_right=True)
+        self.assertEqual(unpacked, (0x1234,))
+
+        ref = b'\x01'
+        packed = pack('u1<', 1, align_right=True)
+        self.assertEqual(packed, ref)
+        unpacked = unpack('u1<', packed, align_right=True)
+        self.assertEqual(unpacked, (1, ))
+
+        # Raw
+        packed = pack('r24', b'', align_right=True)
+        self.assertEqual(packed, b'\x00\x00\x00')
+        packed = pack('r24', b'12', align_right=True)
+        self.assertEqual(packed, b'\x0012')
+        packed = pack('r24', b'123', align_right=True)
+        self.assertEqual(packed, b'123')
+        packed = pack('r24', b'1234', align_right=True)
+        self.assertEqual(packed, b'234')
+
+        # Text
+        packed = pack('t24', '', align_right=True)
+        self.assertEqual(packed, b'\x00\x00\x00')
+        packed = pack('t24', '12', align_right=True)
+        self.assertEqual(packed, b'\x0012')
+        packed = pack('t24', '123', align_right=True)
+        self.assertEqual(packed, b'123')
+        packed = pack('t24', '1234', align_right=True)
+        self.assertEqual(packed, b'234')
+
+        unpacked = unpack('t24', b'\x00\x00\x00', align_right=True)[0]
+        self.assertEqual(unpacked, '\x00\x00\x00')
+        unpacked = unpack('t24', b'12\x00', align_right=True)[0]
+        self.assertEqual(unpacked, '12\x00')
+        unpacked = unpack('t24', b'123', align_right=True)[0]
+        self.assertEqual(unpacked, '123')
+        unpacked = unpack('t24', b'1234', align_right=True)[0]
+        self.assertEqual(unpacked, '234')
+
+        unpacked = unpack('t8',
+                          b'\xff',
+                          text_errors='replace',
+                          align_right=True)[0]
+        self.assertEqual(unpacked, '�')
+        unpacked = unpack('t8',
+                          b'\xff',
+                          text_errors='ignore',
+                          align_right=True)[0]
+        self.assertEqual(unpacked, '')
+
+        cf = bitstruct.compile('t8',
+                               text_encoding='latin-1',
+                               text_errors='replace')
+        unpacked = cf.unpack(b'\xff')[0]
+        self.assertEqual(unpacked, 'ÿ')
+
+        cf = bitstruct.compile('t8',
+                               text_encoding='utf-8',
+                               text_errors='ignore')
+        unpacked = cf.unpack(b'\xff')[0]
+        self.assertEqual(unpacked, '')
+
+        cf = bitstruct.compile('t8',
+                               names=['a'],
+                               text_encoding='utf-8',
+                               text_errors='replace')
+        unpacked = cf.unpack(b'\xff')
+        self.assertEqual(unpacked, {'a': '�'})
+
 
 if __name__ == '__main__':
     unittest.main()
