@@ -11,9 +11,14 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      PURE_PYTHON: ${{ matrix.pure_python }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+          - pure_python: "true"
       fail-fast: false
 
     steps:
