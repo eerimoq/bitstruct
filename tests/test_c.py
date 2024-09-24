@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 import timeit
 import pickle
@@ -83,7 +82,7 @@ class CTest(unittest.TestCase):
         packed = pack('u5b2u1', 31, False, 1)
         self.assertEqual(packed, b'\xf9')
 
-        packed = pack('b1t24', False, u'Hi!')
+        packed = pack('b1t24', False, 'Hi!')
         self.assertEqual(packed, b'$4\x90\x80')
 
         packed = pack('b1t24', False, 'Hi!')
@@ -92,9 +91,8 @@ class CTest(unittest.TestCase):
         packed = pack('t8000', 1000 * '7')
         self.assertEqual(packed, 1000 * b'\x37')
 
-        if sys.version_info >= (3, 6):
-            packed = pack('f16', 1.0)
-            self.assertEqual(packed, b'\x3c\x00')
+        packed = pack('f16', 1.0)
+        self.assertEqual(packed, b'\x3c\x00')
 
         packed = pack('f32', 1.0)
         self.assertEqual(packed, b'\x3f\x80\x00\x00')
@@ -176,15 +174,14 @@ class CTest(unittest.TestCase):
 
         packed = b'$4\x90\x80'
         unpacked = unpack('b1t24', packed)
-        self.assertEqual(unpacked, (False, u'Hi!'))
+        self.assertEqual(unpacked, (False, 'Hi!'))
 
         packed = 1000 * b'7'
         unpacked = unpack('t8000', packed)
         self.assertEqual(packed, 1000 * b'\x37')
 
-        if sys.version_info >= (3, 6):
-            unpacked = unpack('f16', b'\x3c\x00')
-            self.assertEqual(unpacked, (1.0, ))
+        unpacked = unpack('f16', b'\x3c\x00')
+        self.assertEqual(unpacked, (1.0, ))
 
         unpacked = unpack('f32', b'\x3f\x80\x00\x00')
         self.assertEqual(unpacked, (1.0, ))
@@ -225,10 +222,9 @@ class CTest(unittest.TestCase):
         unpacked = unpack('f64', packed)
         self.assertEqual(unpacked, (1.0, ))
 
-        if sys.version_info >= (3, 6):
-            packed = pack('f16', 1.0)
-            unpacked = unpack('f16', packed)
-            self.assertEqual(unpacked, (1.0, ))
+        packed = pack('f16', 1.0)
+        unpacked = unpack('f16', packed)
+        self.assertEqual(unpacked, (1.0, ))
 
     def test_calcsize(self):
         """Calculate size.
@@ -618,10 +614,7 @@ class CTest(unittest.TestCase):
         with self.assertRaises(NotImplementedError) as cm:
             pack('f1', 1.0)
 
-        if sys.version_info >= (3, 6):
-            self.assertEqual(str(cm.exception), 'Float not 16, 32 or 64 bits.')
-        else:
-            self.assertEqual(str(cm.exception), 'Float not 32 or 64 bits.')
+        self.assertEqual(str(cm.exception), 'Float not 16, 32 or 64 bits.')
 
         # Long bool.
         with self.assertRaises(NotImplementedError) as cm:
