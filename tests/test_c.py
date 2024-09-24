@@ -1,5 +1,4 @@
 import sys
-import timeit
 import pickle
 import unittest
 import platform

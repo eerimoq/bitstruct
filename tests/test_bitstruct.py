@@ -1,5 +1,4 @@
 import sys
-import timeit
 import unittest
 from bitstruct import *
 import bitstruct
