@@ -1,9 +1,9 @@
-__version__ = '8.19.0'
-
 import binascii
 import re
 import struct
 from io import BytesIO
+
+from bitstruct._version import __version__
 
 
 class Error(Exception):

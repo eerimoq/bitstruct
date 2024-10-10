@@ -1,6 +1,6 @@
 [build-system]
-build-backend = 'setuptools.build_meta'
-requires = ["setuptools >= 68.0"]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "bitstruct"
@@ -36,17 +36,13 @@ Issues = "https://github.com/eerimoq/bitstruct/issues"
 Source = "https://github.com/eerimoq/bitstruct"
 Homepage = "https://github.com/eerimoq/bitstruct"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.scikit-build]
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["src/bitstruct/_version.py"]
+wheel.packages = ["src/bitstruct"]
 
-[tool.setuptools.dynamic]
-version = {attr = "bitstruct.__version__"}
-
-[tool.setuptools.package-data]
-"*" = [
-  "**/py.typed",
-  "**.pyi",
-]
+[tool.setuptools_scm]  # Section required
+write_to = "src/bitstruct/_version.py"
 
 [tool.cibuildwheel]
 test-requires = "pytest"
