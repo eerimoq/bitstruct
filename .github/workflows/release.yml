@@ -26,8 +26,11 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
       - name: Build wheels
-        run: pipx run cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
@@ -45,9 +48,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
+      - name: Install build
+        run: python -m pip install build
       - name: Build sdist
-        run: pipx run build --sdist
+        run: python -m build --sdist
 
       - uses: actions/upload-artifact@v4
         with:
