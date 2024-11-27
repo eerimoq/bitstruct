@@ -18,10 +18,22 @@ if("${Python_INTERPRETER_ID}" STREQUAL "PyPy")
     return()
 endif()
 
-if(NOT "${SKBUILD_SABI_COMPONENT}" STREQUAL "")
-  python_add_library(c MODULE src/bitstruct/c.c src/bitstruct/bitstream.c WITH_SOABI USE_SABI 3.13)
-else()
-  python_add_library(c MODULE src/bitstruct/c.c src/bitstruct/bitstream.c)
+if(NOT CMAKE_C_COMPILER)
+    message(STATUS "C compiler not found. Skip compilation of C-extension.")
+    return()
 endif()
+
+if(NOT "${SKBUILD_SABI_COMPONENT}" STREQUAL "")
+    # placeholder for stable abi builds
+    set(PY_ABI_OPTIONS "WITH_SOABI" "USE_SABI" "3.11")
+else()
+    set(PY_ABI_OPTIONS "")
+endif()
+
+python_add_library(c
+                   MODULE
+                   src/bitstruct/c.c
+                   src/bitstruct/bitstream.c
+                   ${PY_ABI_OPTIONS})
 
 install(TARGETS c DESTINATION bitstruct)
