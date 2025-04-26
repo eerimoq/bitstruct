@@ -13,11 +13,25 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            use_qemu: true
+            architectures: auto ppc64le
+          - os: ubuntu-24.04-arm
+            architectures: auto armv7l
+          - os: macos-13 # Intel
+          - os: macos-14 # Apple Silicon
+          - os: windows-latest
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
+
+      - if: matrix.use_qemu
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v4
@@ -29,6 +43,8 @@ jobs:
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.architectures || 'auto' }}
 
       - uses: actions/upload-artifact@v4
         with:
