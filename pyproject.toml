@@ -9,7 +9,7 @@ and C bit field structs represented as Python \
 byte strings."""
 readme = "README.rst"
 requires-python = ">=3.7"
-license = { text = "MIT" }
+license = "MIT"
 keywords = [
   "bit field",
   "bit parsing",
@@ -22,7 +22,6 @@ authors = [
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: Implementation :: CPython",
