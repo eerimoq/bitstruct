@@ -15,8 +15,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            use_qemu: true
-            architectures: auto ppc64le
           - os: ubuntu-24.04-arm
             architectures: auto armv7l
           - os: macos-13 # Intel
@@ -26,12 +24,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - if: matrix.use_qemu
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v4
