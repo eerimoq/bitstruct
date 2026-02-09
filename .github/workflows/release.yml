@@ -17,8 +17,10 @@ jobs:
           - os: ubuntu-latest
           - os: ubuntu-24.04-arm
             architectures: auto armv7l
-          - os: macos-14 # Apple Silicon
+          - os: macos-15-intel
+          - os: macos-15 # arm64
           - os: windows-latest
+          - os: windows-11-arm
       fail-fast: false
 
     steps:
