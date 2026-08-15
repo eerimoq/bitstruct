@@ -925,6 +925,13 @@ static struct info_t *parse_format(PyObject *format_obj_p)
             return (NULL);
         }
 
+        if (number_of_bits > (INT_MAX - info_p->number_of_bits)) {
+            PyErr_SetString(PyExc_ValueError, "Format too long.");
+            PyMem_RawFree(info_p);
+
+            return (NULL);
+        }
+
         info_p->number_of_bits += number_of_bits;
     }
 

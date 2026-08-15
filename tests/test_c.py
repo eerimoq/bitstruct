@@ -253,6 +253,12 @@ class CTest(unittest.TestCase):
         size = calcsize('b1s6u7u9P1t8')
         self.assertEqual(size, 32)
 
+        # The total number of bits does not fit in an int.
+        with self.assertRaises(ValueError) as cm:
+            calcsize('p214748369' * 20)
+
+        self.assertEqual(str(cm.exception), 'Format too long.')
+
     def test_compiled_calcsize(self):
         """Calculate size.
 
