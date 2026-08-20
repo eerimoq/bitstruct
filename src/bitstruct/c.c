@@ -2605,6 +2605,14 @@ PyMODINIT_FUNC PyInit_c(void)
         return (NULL);
     }
 
+#ifdef Py_GIL_DISABLED
+    if (PyUnstable_Module_SetGIL(module_p, Py_MOD_GIL_NOT_USED) < 0) {
+        Py_DECREF(module_p);
+
+        return (NULL);
+    }
+#endif
+
     Py_INCREF(&compiled_format_type);
 
     if (PyModule_AddObject(module_p,
@@ -2615,6 +2623,8 @@ PyMODINIT_FUNC PyInit_c(void)
 
         return (NULL);
     }
+
+    Py_INCREF(&compiled_format_dict_type);
 
     if (PyModule_AddObject(module_p,
                            "CompiledFormatDict",
