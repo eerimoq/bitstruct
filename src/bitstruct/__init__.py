@@ -114,7 +114,7 @@ class _Float(_Info):
 class _Raw(_Info):
 
     def pack(self, arg):
-        number_of_padding_bytes = ((self.size - 8 * len(arg)) // 8)
+        number_of_padding_bytes = ((self.size - 8 * len(arg) + 7) // 8)
         arg += (number_of_padding_bytes * b'\x00')
 
         return bin(int(b'01' + binascii.hexlify(arg), 16))[3:self.size + 3]
@@ -154,7 +154,7 @@ class _Text(_Info):
 
     def pack(self, arg):
         encoded = arg.encode('utf-8')
-        number_of_padding_bytes = ((self.size - 8 * len(encoded)) // 8)
+        number_of_padding_bytes = ((self.size - 8 * len(encoded) + 7) // 8)
         encoded += (number_of_padding_bytes * b'\x00')
 
         return _pack_bytearray(self.size, encoded)

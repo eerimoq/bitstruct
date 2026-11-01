@@ -524,6 +524,18 @@ static PyObject *unpack_bool(struct bitstream_reader_t *self_p,
                                 field_info_p->number_of_bits)));
 }
 
+static void pack_padded_bytes(struct bitstream_writer_t *self_p,
+                              const char *buf_p,
+                              Py_ssize_t size,
+                              int number_of_bytes)
+{
+    int bytes_to_copy;
+
+    bytes_to_copy = (size < number_of_bytes ? (int)size : number_of_bytes);
+    bitstream_writer_write_bytes(self_p, (const uint8_t *)buf_p, bytes_to_copy);
+    bitstream_writer_write_repeated_u8(self_p, 0, number_of_bytes - bytes_to_copy);
+}
+
 static void pack_text(struct bitstream_writer_t *self_p,
                       PyObject *value_p,
                       struct field_info_t *field_info_p)
@@ -534,13 +546,7 @@ static void pack_text(struct bitstream_writer_t *self_p,
     buf_p = PyUnicode_AsUTF8AndSize(value_p, &size);
 
     if (buf_p != NULL) {
-        if (size < (field_info_p->number_of_bits / 8)) {
-            PyErr_SetString(PyExc_NotImplementedError, "Short text.");
-        } else {
-            bitstream_writer_write_bytes(self_p,
-                                         (uint8_t *)buf_p,
-                                         field_info_p->number_of_bits / 8);
-        }
+        pack_padded_bytes(self_p, buf_p, size, field_info_p->number_of_bits / 8);
     }
 }
 
@@ -576,13 +582,7 @@ static void pack_raw(struct bitstream_writer_t *self_p,
     res = PyBytes_AsStringAndSize(value_p, &buf_p, &size);
 
     if (res != -1) {
-        if (size < (field_info_p->number_of_bits / 8)) {
-            PyErr_SetString(PyExc_NotImplementedError, "Short raw data.");
-        } else {
-            bitstream_writer_write_bytes(self_p,
-                                         (uint8_t *)buf_p,
-                                         field_info_p->number_of_bits / 8);
-        }
+        pack_padded_bytes(self_p, buf_p, size, field_info_p->number_of_bits / 8);
     }
 }
 

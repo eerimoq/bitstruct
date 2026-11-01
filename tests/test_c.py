@@ -416,13 +416,11 @@ class CTest(unittest.TestCase):
         if not is_cpython_3():
             return
 
-        with self.assertRaises(NotImplementedError):
-            packed = pack('r24', b'')
-            self.assertEqual(packed, b'\x00\x00\x00')
+        packed = pack('r24', b'')
+        self.assertEqual(packed, b'\x00\x00\x00')
 
-        with self.assertRaises(NotImplementedError):
-            packed = pack('r24', b'12')
-            self.assertEqual(packed, b'12\x00')
+        packed = pack('r24', b'12')
+        self.assertEqual(packed, b'12\x00')
 
         packed = pack('r24', b'123')
         self.assertEqual(packed, b'123')
@@ -614,11 +612,8 @@ class CTest(unittest.TestCase):
         self.assertEqual(pack('u1p1', 1), b'\x80')
         self.assertEqual(pack_dict('u1p1', ['foo'], {'foo': 1}), b'\x80')
 
-        # Short text.
-        with self.assertRaises(NotImplementedError) as cm:
-            pack('t16', '1')
-
-        self.assertEqual(str(cm.exception), 'Short text.')
+        # Short text is padded with zero bytes.
+        self.assertEqual(pack('t16', '1'), b'1\x00')
 
         # Bad float length.
         with self.assertRaises(NotImplementedError) as cm:
