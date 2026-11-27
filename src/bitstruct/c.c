@@ -844,12 +844,32 @@ static int count_number_of_fields(const char *format_p,
     return (count);
 }
 
+static int skip_order(const char **format_p_pp)
+{
+    if (**format_p_pp == '<') {
+        PyErr_SetString(PyExc_NotImplementedError,
+                        "Bit endianness and byte order are not supported.");
+
+        return (-1);
+    }
+
+    if (**format_p_pp == '>') {
+        (*format_p_pp)++;
+    }
+
+    return (0);
+}
+
 const char *parse_field(const char *format_p,
                         int *kind_p,
                         int *number_of_bits_p)
 {
     while (isspace(*format_p)) {
         format_p++;
+    }
+
+    if (skip_order(&format_p) != 0) {
+        return (NULL);
     }
 
     *kind_p = *format_p;
@@ -933,6 +953,16 @@ static struct info_t *parse_format(PyObject *format_obj_p)
         }
 
         info_p->number_of_bits += number_of_bits;
+    }
+
+    while (isspace(*format_p)) {
+        format_p++;
+    }
+
+    if (skip_order(&format_p) != 0) {
+        PyMem_RawFree(info_p);
+
+        return (NULL);
     }
 
     return (info_p);

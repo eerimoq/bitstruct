@@ -26,6 +26,25 @@ else:
 
 class CTest(unittest.TestCase):
 
+    def test_byte_order(self):
+        """Byte and bit order are not supported; '>' is the default.
+
+        """
+
+        if not is_cpython_3():
+            return
+
+        for fmt in ['u16<', '<u16', 'u8<u16', 'u8 <', 'p4<u4']:
+            with self.assertRaises(NotImplementedError):
+                pack(fmt, 1, 2)
+
+            with self.assertRaises(NotImplementedError):
+                unpack(fmt, b'\x00\x01\x02')
+
+        self.assertEqual(pack('u16>', 1), b'\x00\x01')
+        self.assertEqual(pack('>u8>u8', 1, 2), b'\x01\x02')
+        self.assertEqual(unpack('u8>u8>', b'\x01\x02'), (1, 2))
+
     def test_pack(self):
         """Pack values.
 
